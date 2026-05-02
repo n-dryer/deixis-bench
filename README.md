@@ -147,7 +147,7 @@ For the full scope statement, see [`docs/benchmark_spec.md`](docs/benchmark_spec
 
 | Path | Purpose |
 |---|---|
-| [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, report, runner |
+| [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, aggregation, rendering, runner |
 | [`data/`](data) | Frozen scenario set, prompt conditions, runtime config, lockfile |
 | [`tests/`](tests) | Runtime and input-validation tests |
 | [`scripts/`](scripts) | Helper scripts — see [`scripts/README.md`](scripts/README.md) |

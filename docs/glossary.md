@@ -323,7 +323,7 @@ String constant in `wearable_assistant_context_bench/aggregation.py`. Currently 
 
 | Path | What's there |
 |---|---|
-| `wearable_assistant_context_bench/` | The single Python package. Adapters, judge, runner, scoring, report, statistics. |
+| `wearable_assistant_context_bench/` | The single Python package. Adapters, judge, runner, scoring, aggregation, rendering, statistics. |
 | `data/` | Frozen content used at runtime: `scenarios.jsonl`, `prompt_conditions.json`, `config.json`, `MANIFEST.lock.json`, `README.md` (dataset card). |
 | `runs/` | Published baseline run results. One subdirectory per run; each contains `findings.md` and `summary.json`. |
 | `tests/` | Five test files mirroring module names: `test_adapters.py`, `test_llm_judge.py`, `test_metrics.py`, `test_runner.py`, `test_schema.py`, plus `conftest.py`. |

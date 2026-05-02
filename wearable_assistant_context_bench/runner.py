@@ -351,7 +351,8 @@ def run(
             config keys; ``None`` if those are unset.
 
     Returns:
-        Per-trial result dicts ready for `core.report` aggregation.
+        Per-trial result dicts ready for
+        `wearable_assistant_context_bench.aggregation` aggregation.
     """
     effective_config = {**CONFIG, **(config or {})}
 
