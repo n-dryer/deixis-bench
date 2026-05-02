@@ -480,8 +480,8 @@ def build_run_summary_dict(
 
     Returns:
         A JSON-serializable dict with primary score, per-class recall,
-        per-pack recall, hedging rates, manifest versions, and a small
-        config snapshot.
+        per-pack recall, hedging rates, the benchmark version, and a
+        small config snapshot.
     """
 
     def _ci(triple: tuple[float, float, float] | None) -> dict | None:
@@ -507,9 +507,7 @@ def build_run_summary_dict(
         "clarify_rate": _ci(clarify_rate(results, ranking_condition)),
         "abstain_rate": _ci(abstain_rate(results, ranking_condition)),
         "coverage_rate": _ci(coverage_rate(results, ranking_condition)),
-        "manifest_versions": {
-            "benchmark_version": manifest.get("benchmark_version"),
-        },
+        "benchmark_version": manifest.get("benchmark_version"),
         "config_snapshot": {
             "trials": manifest.get("trials"),
             "temperature": manifest.get("temperature"),

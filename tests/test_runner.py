@@ -394,7 +394,7 @@ def test_contrast_pack_loads_with_distinct_ids(tmp_path: Path) -> None:
     assert payload["subset"] == "contrast"
 
 
-def test_manifest_records_schema_fields(tmp_path: Path) -> None:
+def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     adapter = _StubAdapter()
     judge = _StubJudge()
     output_dir = tmp_path / "manifest_run"
@@ -416,6 +416,11 @@ def test_manifest_records_schema_fields(tmp_path: Path) -> None:
     assert "ranking_judge_family" in payload
     assert payload["ranking_judge_model"] is None
     assert payload["ranking_judge_family"] is None
+    # Positive: benchmark_version is recorded at the top level.
+    assert payload["benchmark_version"] == "0.1.0"
+    # Negative regression guards: removed fields must not reappear.
+    assert "schema_revision" not in payload
+    assert "judge_prompt_version" not in payload
 
 
 class _StubRankingJudge(_StubJudge):

@@ -287,7 +287,7 @@ Auto-generated Markdown report rendered by `wearable_assistant_context_bench.rep
 Machine-readable companion to `findings.md`. Aggregate metrics + manifest in JSON for downstream tooling. Committed alongside `findings.md`; transcripts are not.
 
 ### Reproducibility manifest
-A JSON block embedded in every `findings.md` (and a `manifest_versions` field in every `summary.json`). Names the benchmark version, judge prompt version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, subset, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
+A JSON block embedded in every `findings.md` (and a `benchmark_version` field plus the same fields in every `summary.json`). Names the benchmark version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, subset, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
 
 ### Ablation
 A category of run that holds everything constant except one variable to measure that variable's contribution.
