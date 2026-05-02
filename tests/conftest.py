@@ -248,13 +248,13 @@ def sample_trial_factory():
         turn_3_repair_passed: bool | None = None,
         pack: str = "main",
         pair_id: str | None = None,
-        cue_type: str = "object_in_hand",
+        shift_type: str = "object_in_hand",
     ) -> dict:
         return {
             "scenario_id": scenario_id,
             "subset": pack,
             "pair_id": pair_id,
-            "shift_type": cue_type,
+            "shift_type": shift_type,
             "condition": condition,
             "trial": trial,
             "target_context": target_context,

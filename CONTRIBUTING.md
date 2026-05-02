@@ -81,7 +81,7 @@ Quick summary:
   vocabulary categories: object name, technique vocabulary, state
   descriptors.
 
-New scenarios are not accepted into the frozen scenario bank.
+New scenarios are not accepted into the frozen main subset.
 Authoring rules are published as contributor reference.
 
 ## Validation
@@ -94,7 +94,7 @@ python scripts/validate_scenarios.py
 
 This runs five programmatic checks (token leakage, object name
 leakage, schema validation, cross-scenario duplication, and lockfile
-drift) over the scenario bank. Two additional semantic checks
+drift) over the scenario set. Two additional semantic checks
 (human identification of image descriptions, semantic leakage
 isolation test) run during scenario authoring rather than in CI.
 
@@ -103,7 +103,7 @@ The full 10-point validation checklist is in
 
 ### Static asset lockfile
 
-`data/MANIFEST.lock.json` pins SHA256 hashes of the scenario bank,
+`data/MANIFEST.lock.json` pins SHA256 hashes of the scenario set,
 prompt conditions, and the judge-prompt template alongside
 `BENCHMARK_VERSION`. The validator's lockfile check fails if any of
 those drift. After a content change (with a corresponding

@@ -39,7 +39,7 @@ REQUIRED_FIELDS = {
 OPTIONAL_FIELDS = {"time_gap_bucket", "notes", "pair_id", "turn_3_repair_prompt_deictic"}
 
 ALLOWED_TARGET_CONTEXTS = {"current", "prior", "clarify", "abstain"}
-ALLOWED_CUE_TYPES = {
+ALLOWED_SHIFT_TYPES = {
     "object_in_hand",
     "object_state",
     "sequential_task",
@@ -86,7 +86,7 @@ def all_records() -> list[dict]:
 
 
 @pytest.fixture(scope="module")
-def bank(all_records: list[dict]) -> list[dict]:
+def main_subset(all_records: list[dict]) -> list[dict]:
     return [r for r in all_records if r.get("subset") == "main"]
 
 
@@ -134,14 +134,14 @@ def test_target_contexts_in_allowed_set(all_records: list[dict]) -> None:
 def test_packs_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
         assert entry["subset"] in ALLOWED_PACKS, (
-            f"{entry['scenario_id']}: unexpected pack {entry['pack']!r}"
+            f"{entry['scenario_id']}: unexpected pack {entry['subset']!r}"
         )
 
 
-def test_cue_types_in_allowed_set(all_records: list[dict]) -> None:
+def test_shift_types_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
-        assert entry["shift_type"] in ALLOWED_CUE_TYPES, (
-            f"{entry['scenario_id']}: unexpected cue_type {entry['cue_type']!r}"
+        assert entry["shift_type"] in ALLOWED_SHIFT_TYPES, (
+            f"{entry['scenario_id']}: unexpected shift_type {entry['shift_type']!r}"
         )
 
 
@@ -155,7 +155,7 @@ def test_difficulty_tiers_in_allowed_set(all_records: list[dict]) -> None:
 def test_cognitive_loads_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
         assert entry["referent_complexity"] in ALLOWED_COGNITIVE_LOADS, (
-            f"{entry['scenario_id']}: unexpected cognitive_load {entry['cognitive_load']!r}"
+            f"{entry['scenario_id']}: unexpected cognitive_load {entry['referent_complexity']!r}"
         )
 
 
@@ -260,7 +260,7 @@ def test_composition_includes_all_four_contexts(all_records: list[dict]) -> None
         counts[entry["target_context"]] = counts.get(entry["target_context"], 0) + 1
     for context in ALLOWED_TARGET_CONTEXTS:
         assert counts.get(context, 0) > 0, (
-            f"expected scenario bank to include {context!r} scenarios, got {counts}"
+            f"expected main subset to include {context!r} scenarios, got {counts}"
         )
 
 
@@ -289,29 +289,29 @@ def _format_fails(fails: list[dict]) -> str:
     return "\n".join(f"  [{f['check']}] {f['scenario_id']}: {f['detail']}" for f in fails)
 
 
-def test_check_1_token_leakage_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_1_token_leakage(bank)
+def test_check_1_token_leakage_passes(main_subset: list[dict]) -> None:
+    fails = validate_scenarios.check_1_token_leakage(main_subset)
     assert not fails, (
         f"check_1_token_leakage produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_2_object_names_in_images_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_2_object_name_in_images(bank)
+def test_check_2_object_names_in_images_passes(main_subset: list[dict]) -> None:
+    fails = validate_scenarios.check_2_object_name_in_images(main_subset)
     assert not fails, (
         f"check_2_object_name_in_images produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_3_schema_validation_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_3_schema_validation(bank)
+def test_check_3_schema_validation_passes(main_subset: list[dict]) -> None:
+    fails = validate_scenarios.check_3_schema_validation(main_subset)
     assert not fails, (
         f"check_3_schema_validation produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_6_duplication_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_6_duplication(bank)
+def test_check_6_duplication_passes(main_subset: list[dict]) -> None:
+    fails = validate_scenarios.check_6_duplication(main_subset)
     assert not fails, (
         f"check_6_duplication produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )

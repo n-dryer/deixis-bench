@@ -1,7 +1,7 @@
 """Runner for the Wearable Assistant Context Bench.
 
 Implements the cross-turn reference-resolution task over the scenario
-bank. Each scenario is a 2-turn conversation; on Turn 2 the runner
+set. Each scenario is a 2-turn conversation; on Turn 2 the runner
 labels the candidate's response with the LLM judge. When
 ``enable_repair`` is set, a Turn 2 failure triggers a templated Turn 3
 repair prompt and the response is labeled again. Per-trial transcripts

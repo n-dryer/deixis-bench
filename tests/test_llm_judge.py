@@ -2,7 +2,7 @@
 no-leakage constraints on what the judge prompt may contain.
 
 The judge labels each Turn 2 response without seeing the scenario's
-``target_context`` label, the ``cue_type`` shift category, or the
+``target_context`` label, the ``shift_type`` shift category, or the
 authoring ``notes``. Those fields would tell the judge the answer it
 is being asked to produce. These tests verify the prompt-building
 helpers respect those constraints.
@@ -321,7 +321,7 @@ def test_ground_truth_context_omits_target_cue_and_notes(scenarios) -> None:
                 leaks.append(f"{scenario.scenario_id}: {phrase!r} found in ground_truth_context")
         if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: cue_type {scenario.shift_type!r} found in "
+                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
                 f"ground_truth_context"
             )
         if scenario.notes and len(scenario.notes) >= 8:
@@ -355,7 +355,7 @@ def test_full_rendered_judge_prompt_omits_privileged_fields(scenarios) -> None:
                 leaks.append(f"{scenario.scenario_id}: {phrase!r} found in rendered judge prompt")
         if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: cue_type {scenario.shift_type!r} found in "
+                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
                 f"rendered judge prompt"
             )
         if scenario.notes and len(scenario.notes) >= 8:

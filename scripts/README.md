@@ -22,7 +22,7 @@ python scripts/validate_scenarios.py --json   # machine-readable output
 
 Exit code is `0` if all checks pass, `1` otherwise. CI runs this on
 every PR. Run it locally before opening a PR that touches the
-scenario bank, prompt conditions, or judge prompt.
+scenario set, prompt conditions, or judge prompt.
 
 The two semantic checks (human identification of scene descriptions,
 semantic-leakage isolation) are LLM-driven and are run during scenario
@@ -32,7 +32,7 @@ authoring rather than in CI. Authoring details live in
 ## `regen_manifest_lock.py`
 
 Regenerates `data/MANIFEST.lock.json`, which pins SHA-256 hashes of
-the scenario bank, prompt conditions, and judge-prompt template
+the scenario set, prompt conditions, and judge-prompt template
 alongside `BENCHMARK_VERSION`.
 
 ```bash

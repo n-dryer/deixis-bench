@@ -245,7 +245,7 @@ manifest fields include:
 - `timestamp_utc`, `runner_git_commit`: run identity
 
 The repo commits `data/MANIFEST.lock.json` with the SHA256 hashes of
-the scenario bank, prompt conditions, and judge prompt template.
+the scenario set, prompt conditions, and judge prompt template.
 `scripts/validate_scenarios.py` checks computed hashes against this
 lockfile; CI fails if they drift without a coordinated
 `BENCHMARK_VERSION` bump.

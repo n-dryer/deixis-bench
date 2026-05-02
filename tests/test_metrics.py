@@ -261,7 +261,7 @@ def _trial(
 
 def _fixture_results() -> list[dict]:
     """Mini fixture: one ``prior`` scenario (sc-03) and three ``current``
-    scenarios (sc-01, sc-02, sc-04). Two trials per cell. All bank pack."""
+    scenarios (sc-01, sc-02, sc-04). Two trials per cell. All main subset."""
     results: list[dict] = []
     prior_cells = [
         ("baseline", [False, False], [True, False]),

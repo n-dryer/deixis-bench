@@ -1,5 +1,5 @@
 """
-Validate the scenario bank against the authoring rules.
+Validate the scenario set against the authoring rules.
 
 Runs four programmatic checks (Checks 1, 2, 3, 6 from the rebuild plan).
 The semantic checks (Check 4: human identification, Check 5: semantic leakage)
@@ -435,7 +435,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
 def check_7_lockfile_drift():
     """Check 7: Computed asset hashes match the static MANIFEST.lock.json.
 
-    Catches silent mutations to the scenario bank, prompt conditions, or
+    Catches silent mutations to the scenario set, prompt conditions, or
     judge-prompt template that ship without a coordinated
     benchmark_version bump. To refresh the lockfile after a deliberate
     content change, run ``python scripts/regen_manifest_lock.py``.

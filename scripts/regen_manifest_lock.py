@@ -1,6 +1,6 @@
 """Regenerate the static asset lockfile at ``data/MANIFEST.lock.json``.
 
-The lockfile pins SHA256 hashes of the unified scenario bank,
+The lockfile pins SHA256 hashes of the unified scenario set,
 prompt-condition definitions, and the judge-prompt template, alongside
 the benchmark version. ``scripts/validate_scenarios.py`` compares the
 computed hashes against this lockfile and fails CI if any drift without

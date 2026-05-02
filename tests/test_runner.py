@@ -364,7 +364,7 @@ def test_parse_args_accepts_pack_flag_contrast() -> None:
 
 
 def test_parse_args_rejects_legacy_pack_values() -> None:
-    """`adversarial` and `hard` were renamed/removed; only `bank` and
+    """`adversarial` and `hard` were renamed/removed; only `main` and
     `contrast` remain valid."""
     with pytest.raises(SystemExit):
         run_module._parse_args(["--subset", "adversarial"])
@@ -504,7 +504,7 @@ def test_parse_args_accepts_repair_style_flag() -> None:
     assert overrides == {"repair_style": "deictic"}
 
 
-def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
+def test_committed_main_subset_has_deictic_for_visible_current_scenarios() -> None:
     scenarios = run_module.load_scenarios(subset="main")
     visible = {
         "object_in_hand",
@@ -524,7 +524,7 @@ def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
     assert not missing
 
 
-def test_committed_bank_omits_deictic_for_non_visible_scenarios() -> None:
+def test_committed_main_subset_omits_deictic_for_non_visible_scenarios() -> None:
     scenarios = run_module.load_scenarios(subset="main")
     bad = [
         s.scenario_id

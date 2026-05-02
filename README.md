@@ -69,7 +69,7 @@ For open-weight Hugging Face models, see [`docs/running_open_weights.md`](docs/r
 
 ```bash
 pytest -q                             # Run tests
-python scripts/validate_scenarios.py  # Validate the bank
+python scripts/validate_scenarios.py  # Validate the scenario set
 wac-bench --help                      # Show runner options
 ```
 
@@ -148,7 +148,7 @@ For the full scope statement, see [`docs/benchmark_spec.md`](docs/benchmark_spec
 | Path | Purpose |
 |---|---|
 | [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, report, runner |
-| [`data/`](data) | Frozen scenario bank, prompt conditions, runtime config, lockfile |
+| [`data/`](data) | Frozen scenario set, prompt conditions, runtime config, lockfile |
 | [`tests/`](tests) | Runtime and input-validation tests |
 | [`scripts/`](scripts) | Helper scripts — see [`scripts/README.md`](scripts/README.md) |
 | [`.env.example`](.env.example) | Environment variable template |
