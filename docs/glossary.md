@@ -281,7 +281,7 @@ One execution of the runner. Identified by its `output_dir`.
 Per-trial result dicts, one per line. Gitignored; regenerate by re-running the matching command.
 
 ### `findings.md`
-Auto-generated Markdown report rendered by `wearable_assistant_context_bench.report.render_findings_markdown`. Includes the benchmark summary, per-class / per-subset / per-change-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
+Auto-generated Markdown report rendered by `wearable_assistant_context_bench.rendering.render_findings_markdown`. Includes the benchmark summary, per-class / per-subset / per-change-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
 
 ### `summary.json`
 Machine-readable companion to `findings.md`. Aggregate metrics + manifest in JSON for downstream tooling. Committed alongside `findings.md`; transcripts are not.
@@ -308,7 +308,7 @@ Static lockfile at `data/MANIFEST.lock.json`. Pins SHA256 hashes of `scenarios.j
 `scripts/validate_scenarios.py`. Runs five programmatic checks: token leakage, object-name leakage, schema validation, cross-scenario duplication, and manifest-lock drift. Run by CI on every PR.
 
 ### `BENCHMARK_VERSION`
-String constant in `wearable_assistant_context_bench/report.py`. Currently `0.1.0`. Single source of truth for the benchmark version; matches `pyproject.toml:version`. Bumps coordinated with content changes; reported in every run's manifest.
+String constant in `wearable_assistant_context_bench/aggregation.py`. Currently `0.1.0`. Single source of truth for the benchmark version; matches `pyproject.toml:version`. Bumps coordinated with content changes; reported in every run's manifest.
 
 </details>
 

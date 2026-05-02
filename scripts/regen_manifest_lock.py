@@ -44,8 +44,8 @@ def _sha256(path: Path) -> str:
 
 def build_lockfile() -> dict:
     sys.path.insert(0, str(REPO_ROOT))
+    from wearable_assistant_context_bench.aggregation import BENCHMARK_VERSION
     from wearable_assistant_context_bench.llm_judge import JUDGE_SYSTEM_PROMPT
-    from wearable_assistant_context_bench.report import BENCHMARK_VERSION
 
     lockfile = {
         "benchmark_version": BENCHMARK_VERSION,

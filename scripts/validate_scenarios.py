@@ -470,8 +470,8 @@ def check_7_lockfile_drift():
     try:
         repo_root = Path(__file__).resolve().parent.parent
         sys.path.insert(0, str(repo_root))
+        from wearable_assistant_context_bench.aggregation import BENCHMARK_VERSION
         from wearable_assistant_context_bench.llm_judge import JUDGE_SYSTEM_PROMPT
-        from wearable_assistant_context_bench.report import BENCHMARK_VERSION
     except ImportError as exc:
         return [
             {

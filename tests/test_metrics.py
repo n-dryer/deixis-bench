@@ -1,9 +1,10 @@
 """Math validation: per-trial scoring + report aggregation.
 
 Covers ``wearable_assistant_context_bench.scoring`` (deterministic
-per-trial signals) and ``wearable_assistant_context_bench.report``
-(aggregation, recall metrics, manifest rendering, inter-judge
-agreement).
+per-trial signals) and
+``wearable_assistant_context_bench.aggregation`` /
+``wearable_assistant_context_bench.rendering`` (aggregation, recall
+metrics, manifest rendering, inter-judge agreement).
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import re
 
 import pytest
 
-from wearable_assistant_context_bench.report import (
+from wearable_assistant_context_bench.aggregation import (
     AUXILIARY_POLICY_NOTE,
     BENCHMARK_LABEL,
     DEFAULT_RANKING_CONDITION,
@@ -34,11 +35,11 @@ from wearable_assistant_context_bench.report import (
     per_policy_pass_rate_by_condition,
     recall_by_change_type,
     recall_by_subset,
-    render_findings_markdown,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
     wilson_interval,
 )
+from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import (
     detect_refusal,
     fuzzy_match,

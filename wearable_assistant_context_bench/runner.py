@@ -34,6 +34,11 @@ except ImportError:
     # slimmed environments. Keys must come from the shell in that case.
     pass
 
+from wearable_assistant_context_bench.aggregation import (
+    BENCHMARK_VERSION,
+    DEFAULT_RANKING_CONDITION,
+    build_run_summary_dict,
+)
 from wearable_assistant_context_bench.gemini_adapter import GeminiAdapter
 from wearable_assistant_context_bench.litellm_adapter import LiteLLMAdapter
 from wearable_assistant_context_bench.llm_judge import (
@@ -49,12 +54,7 @@ from wearable_assistant_context_bench.prompt_conditions import (
     PromptCondition,
     load_prompt_conditions,
 )
-from wearable_assistant_context_bench.report import (
-    BENCHMARK_VERSION,
-    DEFAULT_RANKING_CONDITION,
-    build_run_summary_dict,
-    render_findings_markdown,
-)
+from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import score_response
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
