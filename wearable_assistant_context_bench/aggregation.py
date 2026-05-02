@@ -678,7 +678,7 @@ def _code_implied_policy(signals: dict) -> str | None:
     return None
 
 
-def _sorted_conditions(results: list[dict]) -> list[str]:
+def sorted_conditions(results: list[dict]) -> list[str]:
     observed = {r["condition"] for r in results}
     return sorted(observed, key=_condition_sort_key)
 

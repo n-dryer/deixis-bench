@@ -45,7 +45,6 @@ from wearable_assistant_context_bench.aggregation import (
     SCORED_POLICIES,
     PassRateCell,
     RepairRateCell,
-    _sorted_conditions,
     abstain_rate,
     clarify_rate,
     class_recall_with_ci_under_condition,
@@ -61,6 +60,7 @@ from wearable_assistant_context_bench.aggregation import (
     recall_by_subset,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
+    sorted_conditions,
     wilson_interval,
 )
 
@@ -93,7 +93,7 @@ def render_findings_markdown(
     repair = simulated_repair_rate_by_condition(results)
     disagreements = code_judge_disagreement_by_scenario(results)
     matrix = scenario_by_condition_matrix(results)
-    conditions = _sorted_conditions(results)
+    conditions = sorted_conditions(results)
     inter_judge_summary = inter_judge_agreement_summary(results)
     inter_judge_disagreements = (
         inter_judge_disagreement_by_scenario(results) if inter_judge_summary is not None else {}
