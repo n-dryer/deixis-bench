@@ -1,7 +1,7 @@
 """Metric and aggregation surface for benchmark results.
 
 The runner produces one result dict per trial. Functions here roll
-those up into per-class recall, per-subset and per-change-type
+those up into per-class recall, per-subset and per-shift-type
 breakdowns, contrast-pair consistency, hedging rates, simulated
 repair rates, inter-judge agreement, and the scenario x condition
 matrix used by the Markdown renderer in
@@ -9,10 +9,10 @@ matrix used by the Markdown renderer in
 
 Expected per-trial result dict keys:
     scenario_id (str)
-    subset (str): "bank" or "contrast"
+    subset (str): "main" or "contrast"
     pair_id (str | None)
     target_context (str): one of "current", "prior", "clarify", "abstain"
-    change_type (str)
+    shift_type (str)
     condition (str)
     trial (int)
     turn_2_code_signals (dict)
@@ -321,7 +321,7 @@ def recall_by_subset(
     results: list[dict],
     condition: str,
 ) -> dict[str, tuple[float, float, float] | None]:
-    """Mean per-class recall sliced by pack (``bank`` / ``contrast``).
+    """Mean per-class recall sliced by pack (``main`` / ``contrast``).
 
     Returns a dict keyed on pack name. Each value is
     ``(mean, lo, hi)`` from the normal-approximation CI, or ``None``
@@ -329,7 +329,7 @@ def recall_by_subset(
     """
     by_pack: dict[str, list[dict]] = defaultdict(list)
     for trial in results:
-        pack = trial.get("subset") or "bank"
+        pack = trial.get("subset") or "main"
         by_pack[pack].append(trial)
     return {
         pack: mean_recall_with_ci_under_condition(trials, condition)
@@ -337,11 +337,11 @@ def recall_by_subset(
     }
 
 
-def recall_by_change_type(
+def recall_by_shift_type(
     results: list[dict],
     condition: str,
 ) -> dict[str, tuple[float, float, float] | None]:
-    """Mean recall sliced by ``change_type``.
+    """Mean recall sliced by ``shift_type``.
 
     For each cue type, treats every trial as a single binomial outcome
     (collapses across class). The Wilson CI for the per-cue pass rate
@@ -352,7 +352,7 @@ def recall_by_change_type(
     for trial in results:
         if trial["condition"] != condition:
             continue
-        cue = trial.get("change_type") or "unknown"
+        cue = trial.get("shift_type") or "unknown"
         by_cue[cue].append(trial)
     out: dict[str, tuple[float, float, float] | None] = {}
     for cue, trials in by_cue.items():
@@ -380,7 +380,7 @@ def contrast_pair_consistency(
     """
     pairs: dict[str, list[bool]] = defaultdict(list)
     for trial in results:
-        if (trial.get("subset") or "bank") != "contrast":
+        if (trial.get("subset") or "main") != "contrast":
             continue
         if condition is not None and trial["condition"] != condition:
             continue

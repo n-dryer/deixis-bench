@@ -24,12 +24,9 @@ _INTERVENTIONS_SAMPLE = [
     {
         "name": "baseline",
         "description": (
-            "Minimal system prompt. Default comparison condition for "
-            "the primary benchmark score."
+            "Minimal system prompt. Default comparison condition for the primary benchmark score."
         ),
-        "system_prompt": (
-            "You are an assistant helping a user with an ongoing project."
-        ),
+        "system_prompt": ("You are an assistant helping a user with an ongoing project."),
         "token_count": 13,
     },
     {
@@ -249,7 +246,7 @@ def sample_trial_factory():
         turn_2_code_signals: dict | None = None,
         turn_3_repair_attempted: bool = False,
         turn_3_repair_passed: bool | None = None,
-        pack: str = "bank",
+        pack: str = "main",
         pair_id: str | None = None,
         cue_type: str = "object_in_hand",
     ) -> dict:
@@ -257,7 +254,7 @@ def sample_trial_factory():
             "scenario_id": scenario_id,
             "subset": pack,
             "pair_id": pair_id,
-            "change_type": cue_type,
+            "shift_type": cue_type,
             "condition": condition,
             "trial": trial,
             "target_context": target_context,

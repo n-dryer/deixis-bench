@@ -35,7 +35,7 @@ distinguished by the `subset` field:
 
 | `subset` value | Count | Purpose |
 |---|---|---|
-| `bank` | 50 | The primary 50-scenario subset. |
+| `main` | 50 | The primary 50-scenario subset. |
 | `contrast` | 20 | Distractor-rich minimal pairs. Run via `--subset contrast`. |
 
 There is no train/val/test split. All 70 scenarios are intended for
@@ -49,14 +49,14 @@ and video (scene-description) channels; the judge additionally
 receives the answer lists and a ground-truth section naming the
 actual objects in frame.
 
-## Statistics (Scenario Bank)
+## Statistics (Main Subset)
 
 | Statistic | Value |
 |---|---|
 | Total scenarios | 50 |
 | Distinct activity domains | 16 |
 
-### Shift-type distribution (`change_type`)
+### Shift-type distribution (`shift_type`)
 
 | Category | Count |
 |---|---|
@@ -88,7 +88,7 @@ actual objects in frame.
 
 ### Activity-domain coverage
 
-The bank spans 16 distinct activity domains, including kitchen,
+The main subset spans 16 distinct activity domains, including kitchen,
 workshop, garden, art and craft, automotive, electronics, sports,
 fitness, music, household, office, navigation, finance, and
 communication.
@@ -142,7 +142,7 @@ wac-bench \
 ```
 
 Add `--subset contrast` to run against the contrast subset instead of
-the bank. Add `--no-camera` to strip the `[Camera: ...]` blocks.
+the main subset. Add `--no-camera` to strip the `[Camera: ...]` blocks.
 Add `--enable-repair` to run Turn 3 repair after a Turn 2 miss.
 See `wac-bench --help` for the full flag list.
 

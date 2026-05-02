@@ -109,7 +109,7 @@ def _make_scenario(
     *,
     scenario_id: str = "sc-test",
     target_context: str = "current",
-    change_type: str = "object_in_hand",
+    shift_type: str = "object_in_hand",
     activity_domain: str = "workshop",
     referent_complexity: str = "single_referent",
     difficulty_tier: str = "easy",
@@ -119,14 +119,14 @@ def _make_scenario(
     turn_2_user: str = "What about now?",
     turn_3_repair_prompt: str = "I mean the object I'm holding now.",
     context_image: str | None = None,
-    subset: str = "bank",
+    subset: str = "main",
     pair_id: str | None = None,
     gold: AnswerSet | None = None,
 ) -> Scenario:
     return Scenario(
         scenario_id=scenario_id,
         target_context=target_context,
-        change_type=change_type,
+        shift_type=shift_type,
         activity_domain=activity_domain,
         referent_complexity=referent_complexity,
         difficulty_tier=difficulty_tier,
@@ -157,7 +157,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
         config={"output_dir": str(output_dir)},
     )
 
-    scenario_count = len(run_module.load_scenarios(subset="bank"))
+    scenario_count = len(run_module.load_scenarios(subset="main"))
     condition_count = len(run_module.load_prompt_conditions(run_module.PROMPT_CONDITIONS_PATH))
     expected_trials = scenario_count * condition_count * run_module.CONFIG["trials_per_cell"]
     assert len(results) == expected_trials
@@ -176,7 +176,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "condition",
             "trial",
             "target_context",
-            "change_type",
+            "shift_type",
             "turn_1_user",
             "turn_1_image",
             "turn_1_response",
@@ -190,7 +190,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "turn_3_repair_passed",
         ):
             assert required in payload, f"missing {required} in transcript row"
-        assert payload["subset"] == "bank"
+        assert payload["subset"] == "main"
 
 
 def test_run_default_repair_disabled_records_no_repair_attempts(
@@ -411,7 +411,7 @@ def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     payload = json.loads(match.group(1))
     assert payload["camera_injection"] is True
     assert payload["enable_repair"] is False
-    assert payload["subset"] == "bank"
+    assert payload["subset"] == "main"
     assert "ranking_judge_model" in payload
     assert "ranking_judge_family" in payload
     assert payload["ranking_judge_model"] is None
@@ -487,7 +487,7 @@ def test_resolve_repair_anchor_deictic_falls_back_when_absent() -> None:
     """absent_referent / cross_session_reference scenarios have no
     deictic anchor; the runner falls back to named."""
     scenario = _make_scenario(
-        change_type="absent_referent",
+        shift_type="absent_referent",
         target_context="prior",
         turn_3_repair_prompt="named only",
     )
@@ -505,7 +505,7 @@ def test_parse_args_accepts_repair_style_flag() -> None:
 
 
 def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+    scenarios = run_module.load_scenarios(subset="main")
     visible = {
         "object_in_hand",
         "object_in_view",
@@ -518,18 +518,18 @@ def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
         s.scenario_id
         for s in scenarios
         if s.target_context == "current"
-        and s.change_type in visible
+        and s.shift_type in visible
         and not s.turn_3_repair_prompt_deictic
     ]
     assert not missing
 
 
 def test_committed_bank_omits_deictic_for_non_visible_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+    scenarios = run_module.load_scenarios(subset="main")
     bad = [
         s.scenario_id
         for s in scenarios
-        if s.change_type in {"absent_referent", "cross_session_reference"}
+        if s.shift_type in {"absent_referent", "cross_session_reference"}
         and s.turn_3_repair_prompt_deictic
     ]
     assert not bad
@@ -559,7 +559,7 @@ def test_load_runtime_config_reads_json_file() -> None:
     cfg = run_module.load_runtime_config()
     assert cfg["trials_per_cell"] == 1
     assert cfg["enable_repair"] is False
-    assert cfg["subset"] == "bank"
+    assert cfg["subset"] == "main"
 
 
 # ---------------------------------------------------------------------------

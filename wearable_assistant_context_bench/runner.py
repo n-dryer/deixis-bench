@@ -98,10 +98,10 @@ CONFIG: dict[str, Any] = {
     # is recorded as-is with no repair attempt. When True, the runner
     # fires the templated repair anchor and labels the Turn 3 response.
     "enable_repair": False,
-    # Scenario subset to evaluate. `bank` is the frozen 50-scenario
-    # bank. `contrast` is the separately-tagged 20-scenario
+    # Scenario subset to evaluate. `main` is the frozen 50-scenario
+    # primary subset. `contrast` is the separately-tagged 20-scenario
     # distractor-rich subset of controlled minimal pairs.
-    "subset": "bank",
+    "subset": "main",
 }
 
 
@@ -137,10 +137,10 @@ class Scenario:
 
     JSON line schema (one object per line):
         scenario_id: str
-        subset: str   # "bank" or "contrast"
+        subset: str   # "main" or "contrast"
         pair_id: str | None  # optional contrast-pair grouping key
         target_context: str  # current | prior | clarify | abstain
-        change_type: str        # one of the eight change_type values
+        shift_type: str        # one of the eight shift_type values
         activity_domain: str
         referent_complexity: str
         difficulty_tier: str  # easy | medium | hard
@@ -165,7 +165,7 @@ class Scenario:
 
     scenario_id: str
     target_context: str
-    change_type: str
+    shift_type: str
     activity_domain: str
     referent_complexity: str
     difficulty_tier: str
@@ -174,7 +174,7 @@ class Scenario:
     turn_2_image: str
     turn_2_user: str
     turn_3_repair_prompt: str
-    subset: str = "bank"
+    subset: str = "main"
     pair_id: str | None = None
     context_image: str | None = None
     time_gap_bucket: str | None = None
@@ -208,10 +208,10 @@ def load_scenarios(path: Path = SCENARIOS_PATH, subset: str | None = None) -> li
             scenarios.append(
                 Scenario(
                     scenario_id=entry["scenario_id"],
-                    subset=entry.get("subset", "bank"),
+                    subset=entry.get("subset", "main"),
                     pair_id=entry.get("pair_id"),
                     target_context=entry["target_context"],
-                    change_type=entry["change_type"],
+                    shift_type=entry["shift_type"],
                     activity_domain=entry["activity_domain"],
                     referent_complexity=entry["referent_complexity"],
                     difficulty_tier=entry["difficulty_tier"],
@@ -297,7 +297,7 @@ def _build_manifest(
 
     judge_prompt_sha = hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest()
 
-    pack = effective_config.get("subset", "bank")
+    pack = effective_config.get("subset", "main")
 
     manifest: dict[str, Any] = {
         "benchmark_version": BENCHMARK_VERSION,
@@ -355,7 +355,7 @@ def run(
     """
     effective_config = {**CONFIG, **(config or {})}
 
-    pack = effective_config.get("subset", "bank")
+    pack = effective_config.get("subset", "main")
     scenarios = load_scenarios(SCENARIOS_PATH, subset=pack)
     conditions = load_prompt_conditions(PROMPT_CONDITIONS_PATH)
 
@@ -592,7 +592,7 @@ def _run_one_trial(
         "condition": condition.name,
         "trial": trial,
         "target_context": scenario.target_context,
-        "change_type": scenario.change_type,
+        "shift_type": scenario.shift_type,
         "activity_domain": scenario.activity_domain,
         "difficulty_tier": scenario.difficulty_tier,
         "context_image": scenario.context_image,
@@ -643,7 +643,7 @@ def _run_one_trial(
 def _build_scenario_description(scenario: Scenario) -> str:
     """Construct the scenario description shown to the judge.
 
-    Names neither the target_context nor the change_type. Both would
+    Names neither the target_context nor the shift_type. Both would
     leak the answer the judge is being asked to produce. The judge
     is pointed at the Turn 2 user message and camera frame as the
     perceptual fields that determine what the assistant should now
@@ -665,7 +665,7 @@ def _build_ground_truth_context(scenario: Scenario) -> str:
     the activity domain so it can determine whether the response
     reflects T2 or T1 context.
 
-    Deliberately omits target_context, change_type, and authoring notes.
+    Deliberately omits target_context, shift_type, and authoring notes.
     Those would either name or category-hint the answer the judge is
     being asked to produce.
     """
@@ -810,13 +810,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--subset",
         dest="subset",
-        choices=["bank", "contrast"],
+        choices=["main", "contrast"],
         default=None,
         help=(
-            "Scenario subset to run. `bank` is the frozen 50-scenario "
-            "scenario bank; `contrast` is the separately-tagged "
+            "Scenario subset to run. `main` is the frozen 50-scenario "
+            "primary subset; `contrast` is the separately-tagged "
             "20-scenario distractor-rich subset of controlled minimal "
-            "pairs. Defaults to bank."
+            "pairs. Defaults to main."
         ),
     )
     parser.add_argument(

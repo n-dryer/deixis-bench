@@ -33,7 +33,7 @@ from wearable_assistant_context_bench.aggregation import (
     mean_recall_with_bootstrap_ci_under_condition,
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
-    recall_by_change_type,
+    recall_by_shift_type,
     recall_by_subset,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
@@ -235,15 +235,15 @@ def _trial(
     turn_2_code_signals: dict | None = None,
     turn_3_repair_attempted: bool = False,
     turn_3_repair_passed: bool | None = None,
-    subset: str = "bank",
+    subset: str = "main",
     pair_id: str | None = None,
-    change_type: str = "object_in_hand",
+    shift_type: str = "object_in_hand",
 ) -> dict:
     return {
         "scenario_id": scenario_id,
         "subset": subset,
         "pair_id": pair_id,
-        "change_type": change_type,
+        "shift_type": shift_type,
         "condition": condition,
         "trial": trial,
         "target_context": target_context,
@@ -389,22 +389,22 @@ def test_mean_recall_penalizes_clarify_abstain_as_wrong() -> None:
     assert mean_recall_under_condition(results, "baseline") == pytest.approx(0.5)
 
 
-def test_recall_by_subset_splits_bank_and_contrast() -> None:
+def test_recall_by_subset_splits_main_and_contrast() -> None:
     results = _fixture_results()
     # Mark a few trials as contrast pack.
     for i in range(0, 4):
         results[i]["subset"] = "contrast"
     by_pack = recall_by_subset(results, "baseline")
-    assert "bank" in by_pack
+    assert "main" in by_pack
     assert "contrast" in by_pack
 
 
-def test_recall_by_change_type_buckets_correctly() -> None:
+def test_recall_by_shift_type_buckets_correctly() -> None:
     results = _fixture_results()
     # Tag two trials with a different cue type so the dict has 2 keys.
     for i in range(2):
-        results[i]["change_type"] = "object_state"
-    out = recall_by_change_type(results, "baseline")
+        results[i]["shift_type"] = "object_state"
+    out = recall_by_shift_type(results, "baseline")
     assert "object_in_hand" in out
     assert "object_state" in out
 
@@ -548,7 +548,7 @@ def test_render_findings_markdown_shape() -> None:
     assert "Benchmark summary" in output
     assert "Per-class pass rate" in output
     assert "Per-subset recall" in output
-    assert "Per change-type recall" in output
+    assert "Per shift-type recall" in output
     assert "Contrast pair consistency" in output
     assert "Hedging behavior" in output
     assert "Code-judge disagreement" in output

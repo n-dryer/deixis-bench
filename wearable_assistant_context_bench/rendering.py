@@ -8,9 +8,9 @@ the metric helpers in
 1. **Benchmark summary.** Headline primary score (mean of per-class
    recall under the default comparison condition), per-class recall
    for ``current`` and ``prior``, and a per-condition sensitivity row.
-2. **Per-pack recall.** Mean recall sliced by pack (``bank`` /
+2. **Per-pack recall.** Mean recall sliced by pack (``main`` /
    ``contrast``).
-3. **Per change-type recall.** Mean recall sliced by ``change_type``.
+3. **Per shift-type recall.** Mean recall sliced by ``shift_type``.
 4. **Contrast pair consistency.** Percentage of A/B pairs in the
    contrast pack where both variants pass. Reported only when
    ``pair_id`` metadata is present.
@@ -56,7 +56,7 @@ from wearable_assistant_context_bench.aggregation import (
     mean_recall_with_bootstrap_ci_under_condition,
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
-    recall_by_change_type,
+    recall_by_shift_type,
     recall_by_subset,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
@@ -85,7 +85,7 @@ def render_findings_markdown(
 
     Returns:
         A Markdown string including the benchmark-summary section,
-        per-pack and per-change-type breakdowns, contrast pair
+        per-pack and per-shift-type breakdowns, contrast pair
         consistency, the per-policy pass-rate grid, the scenario
         matrix, hedging behavior, and a reproducibility manifest block.
     """
@@ -109,7 +109,7 @@ def render_findings_markdown(
         for condition in conditions
     }
     per_subset_recall_ci = recall_by_subset(results, ranking_condition)
-    per_cue_recall_ci = recall_by_change_type(results, ranking_condition)
+    per_cue_recall_ci = recall_by_shift_type(results, ranking_condition)
     pair_consistency = contrast_pair_consistency(results, ranking_condition)
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
@@ -136,7 +136,7 @@ def render_findings_markdown(
         "",
         _render_per_subset_table(per_subset_recall_ci),
         "",
-        "## Per change-type recall",
+        "## Per shift-type recall",
         "",
         _render_per_cue_table(per_cue_recall_ci),
         "",
@@ -267,7 +267,7 @@ def _render_per_cue_table(
         rate, lo, hi = triple
         return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
 
-    rows = ["| Change type | Pass rate (95% CI) |", "| --- | --- |"]
+    rows = ["| Shift type | Pass rate (95% CI) |", "| --- | --- |"]
     for cue in sorted(per_cue.keys()):
         rows.append(f"| `{cue}` | {_ci(per_cue[cue])} |")
     return "\n".join(rows)

@@ -24,7 +24,7 @@ REQUIRED_FIELDS = {
     "scenario_id",
     "subset",
     "target_context",
-    "change_type",
+    "shift_type",
     "activity_domain",
     "referent_complexity",
     "difficulty_tier",
@@ -57,7 +57,7 @@ ALLOWED_COGNITIVE_LOADS = {
     "absent_referent",
     "compound_shift",
 }
-ALLOWED_PACKS = {"bank", "contrast"}
+ALLOWED_PACKS = {"main", "contrast"}
 
 SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2}$")
 
@@ -87,7 +87,7 @@ def all_records() -> list[dict]:
 
 @pytest.fixture(scope="module")
 def bank(all_records: list[dict]) -> list[dict]:
-    return [r for r in all_records if r.get("subset") == "bank"]
+    return [r for r in all_records if r.get("subset") == "main"]
 
 
 @pytest.fixture(scope="module")
@@ -140,7 +140,7 @@ def test_packs_in_allowed_set(all_records: list[dict]) -> None:
 
 def test_cue_types_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
-        assert entry["change_type"] in ALLOWED_CUE_TYPES, (
+        assert entry["shift_type"] in ALLOWED_CUE_TYPES, (
             f"{entry['scenario_id']}: unexpected cue_type {entry['cue_type']!r}"
         )
 
@@ -187,7 +187,7 @@ def test_context_image_is_string_or_null(all_records: list[dict]) -> None:
 def test_cross_session_reference_has_context_image(all_records: list[dict]) -> None:
     """``cross_session_reference`` scenarios must have a non-null context_image."""
     for entry in all_records:
-        if entry["change_type"] != "cross_session_reference":
+        if entry["shift_type"] != "cross_session_reference":
             continue
         sid = entry["scenario_id"]
         assert entry["context_image"], (

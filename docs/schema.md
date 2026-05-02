@@ -20,12 +20,12 @@ JSON Lines: one scenario object per line.
 
 | Field | Type | Required | Description | Example |
 |---|---|---|---|---|
-| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` for bank, `adv-NN` for contrast. | `"sc-01"` |
-| `subset` | enum | yes | `"bank"` or `"contrast"`. The 50-scenario primary bank vs the 20-scenario distractor-rich contrast pack. | `"bank"` |
+| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` for main, `adv-NN` for contrast. | `"sc-01"` |
+| `subset` | enum | yes | `"main"` or `"contrast"`. The 50-scenario primary subset vs the 20-scenario distractor-rich contrast pack. | `"main"` |
 | `pair_id` | string or null | no | Optional grouping key for contrast A/B pairs. Used by the contrast-pair-consistency report metric. | `null` |
 | `gold` | object | yes | Inline gold-label dict. See "gold field" below. Replaces the legacy `expected_answers.json` join. | `{"current_answers": [...], ...}` |
 | `target_context` | enum | yes | The correct grounding target for a well-functioning assistant. One of `current`, `prior`, `clarify`, `abstain`. | `"current"` |
-| `change_type` | enum | yes | The category of context shift between Turn 1 and Turn 2 (the shift type). See list below. | `"object_in_hand"` |
+| `shift_type` | enum | yes | The category of context shift between Turn 1 and Turn 2 (the shift type). See list below. | `"object_in_hand"` |
 | `activity_domain` | string | yes | Domain tag (e.g., `workshop`, `kitchen`, `garden`). Used for coverage reporting. | `"workshop"` |
 | `referent_complexity` | enum | yes | Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `absent_referent`, `compound_shift`. | `"single_referent"` |
 | `difficulty_tier` | enum | yes | Internal difficulty estimate. One of `easy`, `medium`, `hard`. | `"medium"` |
@@ -48,11 +48,10 @@ JSON Lines: one scenario object per line.
 | `clarify` | The question is ambiguous given the available context; the assistant should ask for clarification rather than guessing. |
 | `abstain` | The needed information is not present in the context; the assistant should decline to answer rather than hallucinating. |
 
-### change_type values
+### shift_type values
 
 The eight shift-type categories of context shift. Each scenario fits
-exactly one. (In prose throughout the docs we call these "shift
-types"; the JSON field name remains `change_type`.)
+exactly one. The JSON field name is `shift_type`.
 
 | Value | Description |
 |---|---|
@@ -119,7 +118,7 @@ record as auxiliary diagnostics. See
 
 Centralized definitions for terms used throughout the docs:
 
-- **Shift type** (stored as `change_type`). Scenario category describing
+- **Shift type** (stored as `shift_type`). Scenario category describing
   the shape of the context shift between Turn 1 and Turn 2. The 8
   values are listed in
   [`benchmark_spec.md`](benchmark_spec.md#the-8-shift-type-categories).

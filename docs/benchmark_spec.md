@@ -112,7 +112,7 @@ The implementation lives in `_build_message` and
 
 Every scenario fits exactly one category. Categories describe the
 shape of the context shift between Turn 1 and Turn 2. The shift type
-is stored as the `change_type` field in the data files.
+is stored as the `shift_type` field in the data files.
 
 | Category | Description |
 |---|---|
@@ -126,7 +126,7 @@ is stored as the `change_type` field in the data files.
 | `cross_session_reference` | Requires `context_image`; Turn 2 asks about a state that existed before Turn 1. |
 
 In prose throughout the docs we call these "shift types" or
-"scenario categories." The data field name is `change_type`.
+"scenario categories." The data field name is `shift_type`.
 
 ## Target context labels
 
@@ -157,7 +157,7 @@ primary_score = mean(current_recall, prior_recall)
 The primary metric is reported with both a 95% normal-approximation CI
 and a 95% percentile bootstrap CI; per-class numbers carry 95% Wilson
 CIs. The findings template additionally reports per-pack recall
-(bank vs contrast), per change-type recall (`change_type`), contrast
+(main vs contrast), per shift-type recall (`shift_type`), contrast
 pair consistency (when `pair_id` metadata is present), and hedging
 behavior (clarification rate, abstention rate, coverage).
 
@@ -199,7 +199,7 @@ A second LLM labels each Turn 2 response as `current`, `prior`,
 The judge returns a JSON verdict with one label and a one-sentence
 rationale. See `wearable_assistant_context_bench/llm_judge.py` for the prompt and parsing logic.
 The judge prompt is hashed into the run manifest. The privileged-field
-constraint (no `target_context`, `change_type`, or authoring `notes` in
+constraint (no `target_context`, `shift_type`, or authoring `notes` in
 the rendered prompt) is enforced by `tests/test_llm_judge.py`.
 
 `--judge-family auto` picks a judge from a different model family
@@ -234,7 +234,7 @@ manifest fields include:
 
 - `benchmark_version`: the runner code version
 - `camera_injection`: boolean; always `true`
-- `subset`: `"bank"` or `"contrast"`, naming the subset the run evaluated
+- `subset`: `"main"` or `"contrast"`, naming the subset the run evaluated
 - `scenarios_sha256`: hash of `data/scenarios.jsonl`
 - `interventions_sha256`: hash of `data/prompt_conditions.json`
 - `judge_prompt_sha256`: judge prompt identification
@@ -267,7 +267,7 @@ The runner loads its defaults from `data/config.json`. Key defaults:
 
 - `trials_per_cell: 1`
 - `enable_repair: false`. The Turn 3 repair turn is opt-in.
-- `subset: "bank"`. Use `--subset contrast` for the 20-scenario
+- `subset: "main"`. Use `--subset contrast` for the 20-scenario
   subset.
 - `temperature: 0.0`.
 

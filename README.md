@@ -106,10 +106,10 @@ The scene descriptions include visible details such as shape, material, color, m
 
 | Subset (`subset` value) | Size | Purpose |
 |---|---:|---|
-| Scenario Bank (`bank`) | 50 scenarios | Primary subset across 8 shift types |
+| Main Subset (`main`) | 50 scenarios | Primary subset across 8 shift types |
 | Contrast (`contrast`) | 20 scenarios | Distractor-rich minimal pairs where the earlier object or scene may still be visible |
 
-The Scenario Bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
+The main subset covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
 
 For category counts, scenario fields, and authoring rules, see the [dataset card](data/README.md), [schema](docs/schema.md), and [authoring rules](docs/scenario_authoring_rules.md).
 

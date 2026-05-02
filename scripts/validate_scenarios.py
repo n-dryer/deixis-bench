@@ -225,16 +225,16 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
     """Check 3: Required fields present, types correct, IDs unique,
     distributions match.
 
-    ``enforce_distribution`` toggles the bank-level cue_type distribution
-    check. The frozen 50-scenario bank pins exact counts; the contrast
-    pack uses its own distribution and skips this check.
+    ``enforce_distribution`` toggles the main-subset shift_type distribution
+    check. The frozen 50-scenario main subset pins exact counts; the
+    contrast pack uses its own distribution and skips this check.
     """
     fails = []
     required_scenario_fields = {
         "scenario_id",
         "subset",
         "target_context",
-        "change_type",
+        "shift_type",
         "activity_domain",
         "referent_complexity",
         "difficulty_tier",
@@ -247,7 +247,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "gold",
     }
     valid_target_context = {"current", "prior", "clarify", "abstain"}
-    valid_change_type = {
+    valid_shift_type = {
         "object_in_hand",
         "object_state",
         "sequential_task",
@@ -258,7 +258,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "cross_session_reference",
     }
     valid_difficulty = {"easy", "medium", "hard"}
-    valid_subset = {"bank", "contrast"}
+    valid_subset = {"main", "contrast"}
 
     seen_ids = set()
     for sc in scenarios:
@@ -300,12 +300,12 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                     "detail": f"invalid target_context: {sc.get('target_context')!r}",
                 }
             )
-        if sc.get("change_type") not in valid_change_type:
+        if sc.get("shift_type") not in valid_shift_type:
             fails.append(
                 {
                     "scenario_id": sid,
                     "check": "schema",
-                    "detail": f"invalid change_type: {sc.get('change_type')!r}",
+                    "detail": f"invalid shift_type: {sc.get('shift_type')!r}",
                 }
             )
         if sc.get("difficulty_tier") not in valid_difficulty:
@@ -317,7 +317,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                 }
             )
         # cross_session_reference must have non-null context_image
-        if sc.get("change_type") == "cross_session_reference" and not sc.get("context_image"):
+        if sc.get("shift_type") == "cross_session_reference" and not sc.get("context_image"):
             fails.append(
                 {
                     "scenario_id": sid,
@@ -406,9 +406,9 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                 }
             )
 
-    # Distribution checks (bank only).
+    # Distribution checks (main subset only).
     if enforce_distribution:
-        cue_counts = Counter(sc.get("change_type") for sc in scenarios)
+        cue_counts = Counter(sc.get("shift_type") for sc in scenarios)
         expected_cue_counts = {
             "object_in_hand": 12,
             "object_state": 8,
@@ -423,9 +423,9 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
             if cue_counts[cue] != expected_count:
                 fails.append(
                     {
-                        "scenario_id": "<bank>",
+                        "scenario_id": "<main>",
                         "check": "schema",
-                        "detail": f"change_type {cue} count {cue_counts[cue]} does not match expected {expected_count}",
+                        "detail": f"shift_type {cue} count {cue_counts[cue]} does not match expected {expected_count}",
                     }
                 )
 
@@ -444,7 +444,7 @@ def check_7_lockfile_drift():
     if not LOCKFILE_PATH.exists():
         return [
             {
-                "scenario_id": "<bank>",
+                "scenario_id": "<main>",
                 "check": "lockfile",
                 "detail": (
                     f"missing lockfile at {LOCKFILE_PATH}; run "
@@ -457,7 +457,7 @@ def check_7_lockfile_drift():
     except json.JSONDecodeError as exc:
         return [
             {
-                "scenario_id": "<bank>",
+                "scenario_id": "<main>",
                 "check": "lockfile",
                 "detail": f"lockfile is not valid JSON: {exc}",
             }
@@ -475,7 +475,7 @@ def check_7_lockfile_drift():
     except ImportError as exc:
         return [
             {
-                "scenario_id": "<bank>",
+                "scenario_id": "<main>",
                 "check": "lockfile",
                 "detail": f"could not import benchmark package for lockfile check: {exc}",
             }
@@ -494,7 +494,7 @@ def check_7_lockfile_drift():
         if lockfile.get(key) != value:
             fails.append(
                 {
-                    "scenario_id": "<bank>",
+                    "scenario_id": "<main>",
                     "check": "lockfile",
                     "detail": (
                         f"{key} mismatch: lockfile={lockfile.get(key)!r}, "
@@ -509,7 +509,7 @@ def check_7_lockfile_drift():
 
 def check_6_duplication(scenarios):
     """Check 6: Cross-scenario near-duplication on T2 user + T2 image +
-    (change_type, target_context, difficulty_tier) signature."""
+    (shift_type, target_context, difficulty_tier) signature."""
     fails = []
     seen_t2_user = {}
     seen_t2_image = {}
@@ -520,7 +520,7 @@ def check_6_duplication(scenarios):
         t2u = (sc.get("turn_2_user") or "").strip().lower()
         t2i = (sc.get("turn_2_image") or "").strip().lower()
         sig = (
-            sc.get("change_type"),
+            sc.get("shift_type"),
             sc.get("target_context"),
             sc.get("difficulty_tier"),
             sc.get("activity_domain"),
@@ -556,7 +556,7 @@ def check_6_duplication(scenarios):
         if count > 2:
             fails.append(
                 {
-                    "scenario_id": "<bank>",
+                    "scenario_id": "<main>",
                     "check": "duplication",
                     "detail": f"signature {sig} appears {count} times (limit 2)",
                 }
@@ -571,18 +571,18 @@ def main() -> int:
     args = parser.parse_args()
 
     all_records = _load_scenarios_jsonl(SCENARIOS_PATH)
-    bank = [r for r in all_records if r.get("subset") == "bank"]
+    main_subset = [r for r in all_records if r.get("subset") == "main"]
     contrast = [r for r in all_records if r.get("subset") == "contrast"]
 
     all_fails = []
-    # Bank checks (with change_type distribution enforcement)
-    all_fails.extend(check_1_token_leakage(bank))
-    all_fails.extend(check_2_object_name_in_images(bank))
-    all_fails.extend(check_3_schema_validation(bank, enforce_distribution=True))
-    all_fails.extend(check_6_duplication(bank))
+    # Main-subset checks (with shift_type distribution enforcement)
+    all_fails.extend(check_1_token_leakage(main_subset))
+    all_fails.extend(check_2_object_name_in_images(main_subset))
+    all_fails.extend(check_3_schema_validation(main_subset, enforce_distribution=True))
+    all_fails.extend(check_6_duplication(main_subset))
     all_fails.extend(check_7_lockfile_drift())
 
-    # Contrast pack: same checks except change_type distribution.
+    # Contrast pack: same checks except shift_type distribution.
     if contrast:
         all_fails.extend(check_1_token_leakage(contrast))
         all_fails.extend(check_2_object_name_in_images(contrast))
@@ -594,7 +594,9 @@ def main() -> int:
     else:
         if not all_fails:
             contrast_note = f" + {len(contrast)} contrast" if contrast else ""
-            print(f"All checks passed ({len(bank)} bank{contrast_note} scenarios validated).")
+            print(
+                f"All checks passed ({len(main_subset)} main{contrast_note} scenarios validated)."
+            )
         else:
             print(f"{len(all_fails)} validation failure(s):")
             for f in all_fails:
