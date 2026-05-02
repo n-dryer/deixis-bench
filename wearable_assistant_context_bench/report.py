@@ -57,7 +57,9 @@ from wearable_assistant_context_bench.statistics import wilson_ci
 WILSON_Z_95: float = 1.959964
 
 
-def wilson_interval(passed: int, total: int, z: float = WILSON_Z_95) -> tuple[float, float, float] | None:
+def wilson_interval(
+    passed: int, total: int, z: float = WILSON_Z_95
+) -> tuple[float, float, float] | None:
     """Wilson score interval for a binomial proportion as ``(rate, lo, hi)``.
 
     Thin tuple-returning wrapper over :func:`core.statistics.wilson_ci`
@@ -84,17 +86,14 @@ def wilson_interval(passed: int, total: int, z: float = WILSON_Z_95) -> tuple[fl
 POLICIES: tuple[str, ...] = ("current", "prior", "clarify", "abstain")
 SCORED_POLICIES: tuple[str, ...] = ("current", "prior")
 CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "condition_a", "condition_b")
-AUXILIARY_POLICY_NOTE: str = (
-    "auxiliary; not included in the primary current/prior score"
-)
+AUXILIARY_POLICY_NOTE: str = "auxiliary; not included in the primary current/prior score"
 
 BENCHMARK_NAME: str = "Wearable Assistant Context Bench"
-BENCHMARK_VERSION: str = "0.1"
+BENCHMARK_VERSION: str = "0.1.0"
 BENCHMARK_LABEL: str = (
     "situated context-tracking benchmark for multimodal AI assistants "
     "used actively for advice or coaching (wearable or handheld)"
 )
-SCHEMA_REVISION: int = 1
 DEFAULT_RANKING_CONDITION: str = "baseline"
 
 
@@ -287,9 +286,7 @@ def mean_recall_with_ci_under_condition(
         return None
     rates = {p: n_passed[p] / n_total[p] for p in SCORED_POLICIES}
     mean = sum(rates.values()) / len(rates)
-    var_sum = sum(
-        rates[p] * (1.0 - rates[p]) / n_total[p] for p in SCORED_POLICIES
-    )
+    var_sum = sum(rates[p] * (1.0 - rates[p]) / n_total[p] for p in SCORED_POLICIES)
     se = math.sqrt(var_sum) / len(SCORED_POLICIES)
     margin = z * se
     return mean, max(0.0, mean - margin), min(1.0, mean + margin)
@@ -336,7 +333,9 @@ def mean_recall_with_bootstrap_ci_under_condition(
     bootstraps.sort()
     lo_idx = max(0, int(round(0.025 * n_iter)) - 1)
     hi_idx = min(n_iter - 1, int(round(0.975 * n_iter)) - 1)
-    point = sum(by_class[p].count(1.0) / len(by_class[p]) for p in SCORED_POLICIES) / len(SCORED_POLICIES)
+    point = sum(by_class[p].count(1.0) / len(by_class[p]) for p in SCORED_POLICIES) / len(
+        SCORED_POLICIES
+    )
     return point, bootstraps[lo_idx], bootstraps[hi_idx]
 
 
@@ -416,10 +415,7 @@ def contrast_pair_consistency(
             "pairs_evaluated": 0,
             "consistency_rate": None,
             "ci": None,
-            "note": (
-                "no pair_id metadata in current contrast pack; "
-                "metric not applicable"
-            ),
+            "note": ("no pair_id metadata in current contrast pack; metric not applicable"),
         }
     consistent = sum(1 for outcomes in pairs.values() if all(outcomes))
     total = len(pairs)
@@ -433,23 +429,17 @@ def contrast_pair_consistency(
     }
 
 
-def clarify_rate(
-    results: list[dict], condition: str
-) -> tuple[float, float, float] | None:
+def clarify_rate(results: list[dict], condition: str) -> tuple[float, float, float] | None:
     """Share of trials whose primary judge label is ``clarify``."""
     return _label_rate(results, condition, label="clarify")
 
 
-def abstain_rate(
-    results: list[dict], condition: str
-) -> tuple[float, float, float] | None:
+def abstain_rate(results: list[dict], condition: str) -> tuple[float, float, float] | None:
     """Share of trials whose primary judge label is ``abstain``."""
     return _label_rate(results, condition, label="abstain")
 
 
-def coverage_rate(
-    results: list[dict], condition: str
-) -> tuple[float, float, float] | None:
+def coverage_rate(results: list[dict], condition: str) -> tuple[float, float, float] | None:
     """``1 - (clarify_rate + abstain_rate)`` — share of substantive answers.
 
     Low coverage indicates excessive hedging. Reported as a Wilson CI
@@ -512,19 +502,13 @@ def build_run_summary_dict(
         "judge_family": manifest.get("judge_family"),
         "ranking_condition": ranking_condition,
         "primary_score_mean_recall": _ci(primary),
-        "per_class_recall": {
-            policy: _ci(triple) for policy, triple in per_class.items()
-        },
-        "per_subset_recall": {
-            pack: _ci(triple) for pack, triple in per_pack.items()
-        },
+        "per_class_recall": {policy: _ci(triple) for policy, triple in per_class.items()},
+        "per_subset_recall": {pack: _ci(triple) for pack, triple in per_pack.items()},
         "clarify_rate": _ci(clarify_rate(results, ranking_condition)),
         "abstain_rate": _ci(abstain_rate(results, ranking_condition)),
         "coverage_rate": _ci(coverage_rate(results, ranking_condition)),
         "manifest_versions": {
             "benchmark_version": manifest.get("benchmark_version"),
-            "judge_prompt_version": manifest.get("judge_prompt_version"),
-            "schema_revision": manifest.get("schema_revision"),
         },
         "config_snapshot": {
             "trials": manifest.get("trials"),
@@ -581,8 +565,7 @@ def cohens_kappa(labels_a: list[str], labels_b: list[str]) -> float | None:
     """
     if len(labels_a) != len(labels_b):
         raise ValueError(
-            f"cohens_kappa requires equal-length sequences; "
-            f"got {len(labels_a)} vs {len(labels_b)}"
+            f"cohens_kappa requires equal-length sequences; got {len(labels_a)} vs {len(labels_b)}"
         )
     n = len(labels_a)
     if n < 2:
@@ -676,9 +659,7 @@ def scenario_by_condition_matrix(
             {
                 "trial": trial["trial"],
                 "turn_2_passed": bool(trial["turn_2_passed"]),
-                "turn_3_repair_attempted": bool(
-                    trial.get("turn_3_repair_attempted", False)
-                ),
+                "turn_3_repair_attempted": bool(trial.get("turn_3_repair_attempted", False)),
                 "turn_3_repair_passed": trial.get("turn_3_repair_passed"),
             }
         )
@@ -692,7 +673,6 @@ REQUIRED_MANIFEST_KEYS: tuple[str, ...] = (
     "benchmark_version",
     "scenarios_sha256",
     "prompt_conditions_sha256",
-    "judge_prompt_version",
     "candidate_model",
     "judge_model",
     "judge_family",
@@ -736,20 +716,14 @@ def render_findings_markdown(
     conditions = _sorted_conditions(results)
     inter_judge_summary = inter_judge_agreement_summary(results)
     inter_judge_disagreements = (
-        inter_judge_disagreement_by_scenario(results)
-        if inter_judge_summary is not None
-        else {}
+        inter_judge_disagreement_by_scenario(results) if inter_judge_summary is not None else {}
     )
 
-    primary_score_ci = mean_recall_with_ci_under_condition(
-        results, ranking_condition
-    )
+    primary_score_ci = mean_recall_with_ci_under_condition(results, ranking_condition)
     primary_score_bootstrap = mean_recall_with_bootstrap_ci_under_condition(
         results, ranking_condition
     )
-    class_recall_ci = class_recall_with_ci_under_condition(
-        results, ranking_condition
-    )
+    class_recall_ci = class_recall_with_ci_under_condition(results, ranking_condition)
     per_condition_recall_ci = {
         condition: mean_recall_with_ci_under_condition(results, condition)
         for condition in conditions
@@ -760,9 +734,7 @@ def render_findings_markdown(
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
     coverage_ci = coverage_rate(results, ranking_condition)
-    repair_enabled = any(
-        bool(t.get("turn_3_repair_attempted")) for t in results
-    )
+    repair_enabled = any(bool(t.get("turn_3_repair_attempted")) for t in results)
 
     sections = [
         f"# {BENCHMARK_NAME}: Findings",
@@ -798,34 +770,38 @@ def render_findings_markdown(
         "",
     ]
     if repair_enabled:
-        sections.extend([
-            "## Simulated repair rate by condition",
+        sections.extend(
+            [
+                "## Simulated repair rate by condition",
+                "",
+                _render_repair_table(repair),
+                "",
+            ]
+        )
+    sections.extend(
+        [
+            "## Hedging behavior",
             "",
-            _render_repair_table(repair),
+            _render_hedging_section(clarify_ci, abstain_ci, coverage_ci),
             "",
-        ])
-    sections.extend([
-        "## Hedging behavior",
-        "",
-        _render_hedging_section(clarify_ci, abstain_ci, coverage_ci),
-        "",
-        "## Code-judge disagreement by scenario",
-        "",
-        _render_disagreement_list(disagreements),
-        "",
-        "## Inter-judge agreement (cross-LLM)",
-        "",
-        _render_inter_judge_section(inter_judge_summary, inter_judge_disagreements),
-        "",
-        "## Scenario-by-condition matrix",
-        "",
-        _render_scenario_matrix(matrix, conditions, scenario_policies),
-        "",
-        "## Reproducibility manifest",
-        "",
-        _render_manifest_block(manifest or {}),
-        "",
-    ])
+            "## Code-judge disagreement by scenario",
+            "",
+            _render_disagreement_list(disagreements),
+            "",
+            "## Inter-judge agreement (cross-LLM)",
+            "",
+            _render_inter_judge_section(inter_judge_summary, inter_judge_disagreements),
+            "",
+            "## Scenario-by-condition matrix",
+            "",
+            _render_scenario_matrix(matrix, conditions, scenario_policies),
+            "",
+            "## Reproducibility manifest",
+            "",
+            _render_manifest_block(manifest or {}),
+            "",
+        ]
+    )
     return "\n".join(sections)
 
 
@@ -1007,9 +983,7 @@ def _render_repair_table(repair: dict[str, RepairRateCell]) -> str:
         pct = cell.rate * 100 if cell.rate is not None else 0.0
         ci = wilson_interval(cell.repaired, cell.failures)
         if ci is None:
-            rows.append(
-                f"| {condition} | {pct:.1f}% ({cell.repaired} / {cell.failures}) |"
-            )
+            rows.append(f"| {condition} | {pct:.1f}% ({cell.repaired} / {cell.failures}) |")
         else:
             _, lo, hi = ci
             rows.append(
@@ -1025,8 +999,7 @@ def _render_disagreement_list(disagreements: dict[str, int]) -> str:
     lines: list[str] = []
     for scenario_id in sorted(disagreements.keys()):
         lines.append(
-            f"- {scenario_id}: {disagreements[scenario_id]} trial(s) "
-            "with code/judge disagreement"
+            f"- {scenario_id}: {disagreements[scenario_id]} trial(s) with code/judge disagreement"
         )
     return "\n".join(lines)
 
@@ -1089,9 +1062,7 @@ def _render_scenario_matrix(
     for scenario_id in scenario_order:
         if scenario_id not in matrix:
             continue
-        target_context = (
-            scenario_policies[scenario_id] if scenario_policies else "?"
-        )
+        target_context = scenario_policies[scenario_id] if scenario_policies else "?"
         cells = [scenario_id, f"`{target_context}`"]
         for condition in conditions:
             trials = matrix[scenario_id].get(condition, [])
@@ -1138,8 +1109,7 @@ def _render_manifest_block(manifest: dict[str, Any]) -> str:
     extras = {
         key: value
         for key, value in manifest.items()
-        if key not in REQUIRED_MANIFEST_KEYS
-        and key != "manifest_warnings"
+        if key not in REQUIRED_MANIFEST_KEYS and key != "manifest_warnings"
     }
     out.update(extras)
     out["manifest_warnings"] = warnings

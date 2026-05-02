@@ -165,7 +165,7 @@ Default behavior. Picks a judge from a different family than the candidate (Clau
 Optional second judge held constant across all candidate runs in a comparison sweep.
 
 ### Judge prompt
-The system prompt that defines the judge's task and JSON output contract. Versioned (`JUDGE_PROMPT_VERSION`) and hashed into every run's manifest. Lives in `wearable_assistant_context_bench/llm_judge.py`. Privileged-field constraint enforced by `tests/test_llm_judge.py`.
+The system prompt that defines the judge's task and JSON output contract. Hashed into every run's manifest. Lives in `wearable_assistant_context_bench/llm_judge.py`. Privileged-field constraint enforced by `tests/test_llm_judge.py`.
 
 </details>
 
@@ -302,19 +302,13 @@ A category of run that holds everything constant except one variable to measure 
 <summary><strong>Versioning, the lockfile, and the validator</strong></summary>
 
 ### `MANIFEST.lock.json`
-Static lockfile at `data/MANIFEST.lock.json`. Pins SHA256 hashes of `scenarios.jsonl`, `prompt_conditions.json`, and the judge-prompt template, plus `BENCHMARK_VERSION`, `JUDGE_PROMPT_VERSION`, and `SCHEMA_REVISION`. Hash drift without a coordinated version bump fails CI.
+Static lockfile at `data/MANIFEST.lock.json`. Pins SHA256 hashes of `scenarios.jsonl`, `prompt_conditions.json`, and the judge-prompt template, plus `BENCHMARK_VERSION`. Hash drift without a coordinated version bump fails CI.
 
 ### Validator
 `scripts/validate_scenarios.py`. Runs five programmatic checks: token leakage, object-name leakage, schema validation, cross-scenario duplication, and manifest-lock drift. Run by CI on every PR.
 
 ### `BENCHMARK_VERSION`
-String constant in `wearable_assistant_context_bench/report.py`. Currently `0.1`. Bumps coordinated with content changes; reported in every run's manifest.
-
-### `JUDGE_PROMPT_VERSION`
-String constant in `wearable_assistant_context_bench/llm_judge.py`. Currently `0.1.0`. Bumps when the judge prompt template changes.
-
-### `SCHEMA_REVISION`
-Integer counter for the on-disk scenario format. Currently `1`. Bumps when the schema fields change in incompatible ways.
+String constant in `wearable_assistant_context_bench/report.py`. Currently `0.1.0`. Single source of truth for the benchmark version; matches `pyproject.toml:version`. Bumps coordinated with content changes; reported in every run's manifest.
 
 </details>
 

@@ -33,7 +33,7 @@ authoring rather than in CI. Authoring details live in
 
 Regenerates `data/MANIFEST.lock.json`, which pins SHA-256 hashes of
 the scenario bank, prompt conditions, and judge-prompt template
-alongside `BENCHMARK_VERSION` and `JUDGE_PROMPT_VERSION`.
+alongside `BENCHMARK_VERSION`.
 
 ```bash
 python scripts/regen_manifest_lock.py

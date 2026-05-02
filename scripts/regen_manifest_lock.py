@@ -2,10 +2,9 @@
 
 The lockfile pins SHA256 hashes of the unified scenario bank,
 prompt-condition definitions, and the judge-prompt template, alongside
-the benchmark and judge-prompt versions. ``scripts/validate_scenarios.py``
-compares the computed hashes against this lockfile and fails CI if any
-drift without a coordinated ``BENCHMARK_VERSION`` (or
-``JUDGE_PROMPT_VERSION``) bump.
+the benchmark version. ``scripts/validate_scenarios.py`` compares the
+computed hashes against this lockfile and fails CI if any drift without
+a coordinated ``BENCHMARK_VERSION`` bump.
 
 Run this script after a coordinated content change is merged to refresh
 the lockfile.
@@ -45,16 +44,12 @@ def _sha256(path: Path) -> str:
 
 def build_lockfile() -> dict:
     sys.path.insert(0, str(REPO_ROOT))
-    from wearable_assistant_context_bench.llm_judge import JUDGE_PROMPT_VERSION, JUDGE_SYSTEM_PROMPT
-    from wearable_assistant_context_bench.report import BENCHMARK_VERSION, SCHEMA_REVISION
+    from wearable_assistant_context_bench.llm_judge import JUDGE_SYSTEM_PROMPT
+    from wearable_assistant_context_bench.report import BENCHMARK_VERSION
 
     lockfile = {
         "benchmark_version": BENCHMARK_VERSION,
-        "schema_revision": SCHEMA_REVISION,
-        "judge_prompt_version": JUDGE_PROMPT_VERSION,
-        "judge_prompt_sha256": hashlib.sha256(
-            JUDGE_SYSTEM_PROMPT.encode("utf-8")
-        ).hexdigest(),
+        "judge_prompt_sha256": hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
         "scenarios_sha256": _sha256(SCENARIOS_PATH),
         "prompt_conditions_sha256": _sha256(PROMPT_CONDITIONS_PATH),
     }

@@ -155,9 +155,7 @@ def test_score_response_no_trigger_verb_leaves_has_prior_true() -> None:
 
 def test_score_response_has_clarify_signal() -> None:
     result = score_response(
-        response=(
-            "Do you mean the scene you just described, or the one from earlier?"
-        ),
+        response=("Do you mean the scene you just described, or the one from earlier?"),
         current_answers=[],
         prior_answers=[],
         clarify_indicators=["Do you mean"],
@@ -532,10 +530,9 @@ def test_render_findings_markdown_shape() -> None:
             "sc-04": "current",
         },
         manifest={
-            "benchmark_version": "0.1",
+            "benchmark_version": "0.1.0",
             "scenarios_sha256": "abc",
             "prompt_conditions_sha256": "ghi",
-            "judge_prompt_version": "0.1.0",
             "candidate_model": "claude-sonnet-4-6",
             "judge_model": "gemini-2.5-flash",
             "judge_family": "gemini",
@@ -563,10 +560,9 @@ def test_render_findings_markdown_shape() -> None:
 
 def test_render_findings_markdown_emits_complete_manifest() -> None:
     manifest = {
-        "benchmark_version": "0.1",
+        "benchmark_version": "0.1.0",
         "scenarios_sha256": "sha-scenarios",
         "prompt_conditions_sha256": "sha-interventions",
-        "judge_prompt_version": "0.1.0",
         "candidate_model": "claude-sonnet-4-6",
         "judge_model": "gemini-2.5-flash",
         "judge_family": "gemini",
@@ -592,7 +588,7 @@ def test_render_findings_markdown_emits_complete_manifest() -> None:
 def test_render_findings_markdown_manifest_fills_missing_keys() -> None:
     output = render_findings_markdown(
         _fixture_results(),
-        manifest={"benchmark_version": "0.1"},
+        manifest={"benchmark_version": "0.1.0"},
     )
     match = re.search(r"```json\n(.*?)\n```", output, re.DOTALL)
     assert match is not None
@@ -690,9 +686,7 @@ def test_mean_recall_bootstrap_ci_brackets_normal_ci() -> None:
                 turn_2_passed=(i < 10),
             )
         )
-    triple = mean_recall_with_bootstrap_ci_under_condition(
-        results, "baseline", n_iter=2000
-    )
+    triple = mean_recall_with_bootstrap_ci_under_condition(results, "baseline", n_iter=2000)
     assert triple is not None
     point, lo, hi = triple
     # Mean of recalls = (1.0 + 0.5) / 2 = 0.75
@@ -752,9 +746,7 @@ def test_inter_judge_disagreement_by_scenario_counts_only_paired_trials() -> Non
     results = _fixture_results()
     target_idx = 0
     results[target_idx]["turn_2_ranking_judge_label"] = (
-        "prior"
-        if results[target_idx]["turn_2_judge_label"] != "prior"
-        else "current"
+        "prior" if results[target_idx]["turn_2_judge_label"] != "prior" else "current"
     )
     counts = inter_judge_disagreement_by_scenario(results)
     assert counts.get(results[target_idx]["scenario_id"]) == 1

@@ -409,7 +409,6 @@ def test_manifest_records_schema_fields(tmp_path: Path) -> None:
     match = _re.search(r"```json\n(.*?)\n```", findings_body, _re.DOTALL)
     assert match is not None
     payload = json.loads(match.group(1))
-    assert payload["schema_revision"] == 1
     assert payload["camera_injection"] is True
     assert payload["enable_repair"] is False
     assert payload["subset"] == "bank"

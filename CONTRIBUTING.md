@@ -104,11 +104,10 @@ The full 10-point validation checklist is in
 ### Static asset lockfile
 
 `data/MANIFEST.lock.json` pins SHA256 hashes of the scenario bank,
-prompt conditions, and the judge-prompt template alongside the
-benchmark and judge-prompt versions. The validator's lockfile check
-fails if any of those drift. After a content change (with a
-corresponding `BENCHMARK_VERSION` or `JUDGE_PROMPT_VERSION` bump in
-code), regenerate the lockfile:
+prompt conditions, and the judge-prompt template alongside
+`BENCHMARK_VERSION`. The validator's lockfile check fails if any of
+those drift. After a content change (with a corresponding
+`BENCHMARK_VERSION` bump in code), regenerate the lockfile:
 
 ```bash
 python scripts/regen_manifest_lock.py
