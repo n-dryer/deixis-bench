@@ -608,5 +608,101 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "third fitness+abstain; treadmill console face hidden in glare, outdoor T2 has no readout"
+  },
+  "sc-121": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-122": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'pot' → 'vessel')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-123": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-124": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'wheel' → 'rim')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-125": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'looped fabric' rephrased in image)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 4,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-126": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 4,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-127": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 4,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-128": {
+    "batch": "6a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 4,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent batch 6a"
   }
 }
