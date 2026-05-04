@@ -249,13 +249,11 @@ def sample_trial_factory():
         turn_2_code_signals: dict | None = None,
         turn_3_repair_attempted: bool = False,
         turn_3_repair_passed: bool | None = None,
-        pack: str = "bank",
         pair_id: str | None = None,
         cue_type: str = "object_in_hand",
     ) -> dict:
         return {
             "scenario_id": scenario_id,
-            "subset": pack,
             "pair_id": pair_id,
             "change_type": cue_type,
             "condition": condition,

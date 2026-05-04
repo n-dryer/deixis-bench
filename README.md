@@ -98,18 +98,15 @@ flowchart LR
     Label -->|clarify or abstain| Aux["Reported separately"]
 ```
 
-### Scenarios and subsets
+### Scenarios
 
 Each scenario is a three-turn conversation. Between Turn 1 and Turn 2, the user changes what they are holding, viewing, doing, or referring to. The user does not spell out the change. The model has to answer the Turn 2 question using the scene the user means at that moment.
 
 The scene descriptions include visible details such as shape, material, color, motion, and position. They avoid naming the object directly.
 
-| Subset (`subset` value) | Size | Purpose |
-|---|---:|---|
-| Scenario Bank (`bank`) | 50 scenarios | Primary subset across 8 shift types |
-| Contrast (`contrast`) | 20 scenarios | Distractor-rich minimal pairs where the earlier object or scene may still be visible |
+The bank holds 70 scenarios in a single unified set. Scenario IDs use two prefixes (`sc-NN` and `adv-NN`) for historical reasons; both are first-class scenarios in the same bank.
 
-The Scenario Bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
+The bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
 
 For category counts, scenario fields, and authoring rules, see the [dataset card](data/README.md), [schema](docs/schema.md), and [authoring rules](docs/scenario_authoring_rules.md).
 

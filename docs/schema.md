@@ -20,9 +20,8 @@ JSON Lines: one scenario object per line.
 
 | Field | Type | Required | Description | Example |
 |---|---|---|---|---|
-| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` for bank, `adv-NN` for contrast. | `"sc-01"` |
-| `subset` | enum | yes | `"bank"` or `"contrast"`. The 50-scenario primary bank vs the 20-scenario distractor-rich contrast pack. | `"bank"` |
-| `pair_id` | string or null | no | Optional grouping key for contrast A/B pairs. Used by the contrast-pair-consistency report metric. | `null` |
+| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` or `adv-NN`. The two prefixes are historical (the `adv-NN` rows were authored as a separately-tagged "contrast" subset; that subset was retired in favor of a single unified bank). Both forms are first-class scenarios in the bank. | `"sc-01"` |
+| `pair_id` | string or null | no | Optional grouping key reserved for a future paired-twin contrast companion. Currently null in all rows. The runner does not use it today. | `null` |
 | `gold` | object | yes | Inline gold-label dict. See "gold field" below. Replaces the legacy `expected_answers.json` join. | `{"current_answers": [...], ...}` |
 | `target_context` | enum | yes | The correct grounding target for a well-functioning assistant. One of `current`, `prior`, `clarify`, `abstain`. | `"current"` |
 | `change_type` | enum | yes | The category of context shift between Turn 1 and Turn 2 (the shift type). See list below. | `"object_in_hand"` |

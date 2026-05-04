@@ -30,13 +30,9 @@ English.
 ### Data files
 
 All 70 scenarios live in a single `data/scenarios.jsonl` file
-(one JSON object per line) with inline `gold` labels. Records are
-distinguished by the `subset` field:
-
-| `subset` value | Count | Purpose |
-|---|---|---|
-| `bank` | 50 | The primary 50-scenario subset. |
-| `contrast` | 20 | Distractor-rich minimal pairs. Run via `--subset contrast`. |
+(one JSON object per line) with inline `gold` labels. The bank is one
+unified set; scenario IDs carry two historical prefixes (`sc-NN` and
+`adv-NN`) but every scenario is a first-class member of the same bank.
 
 There is no train/val/test split. All 70 scenarios are intended for
 inference and labeling, not training.
@@ -49,46 +45,46 @@ and video (scene-description) channels; the judge additionally
 receives the answer lists and a ground-truth section naming the
 actual objects in frame.
 
-## Statistics (Scenario Bank)
+## Statistics
 
 | Statistic | Value |
 |---|---|
-| Total scenarios | 50 |
-| Distinct activity domains | 16 |
+| Total scenarios | 70 |
+| Distinct activity domains | 14 |
 
 ### Shift-type distribution (`change_type`)
 
 | Category | Count |
 |---|---|
-| `object_in_hand` | 12 |
-| `object_state` | 8 |
-| `sequential_task` | 6 |
-| `location` | 6 |
-| `object_in_view` | 5 |
-| `absent_referent` | 5 |
-| `screen_content` | 4 |
+| `object_in_hand` | 18 |
+| `object_state` | 11 |
+| `object_in_view` | 9 |
+| `sequential_task` | 9 |
+| `location` | 8 |
+| `absent_referent` | 6 |
+| `screen_content` | 5 |
 | `cross_session_reference` | 4 |
 
 ### `target_context` distribution
 
 | Label | Count |
 |---|---|
-| `current` | 33 |
-| `prior` | 12 |
-| `clarify` | 3 |
-| `abstain` | 2 |
+| `current` | 46 |
+| `prior` | 16 |
+| `clarify` | 5 |
+| `abstain` | 3 |
 
 ### `difficulty_tier` distribution
 
 | Tier | Count |
 |---|---|
 | `easy` | 15 |
-| `medium` | 20 |
-| `hard` | 15 |
+| `medium` | 29 |
+| `hard` | 26 |
 
 ### Activity-domain coverage
 
-The bank spans 16 distinct activity domains, including kitchen,
+The bank spans 14 distinct activity domains, including kitchen,
 workshop, garden, art and craft, automotive, electronics, sports,
 fitness, music, household, office, navigation, finance, and
 communication.
@@ -141,8 +137,7 @@ wac-bench \
   --output-dir runs/<run_name>
 ```
 
-Add `--subset contrast` to run against the contrast subset instead of
-the bank. Add `--no-camera` to strip the `[Camera: ...]` blocks.
+Add `--no-camera` to strip the `[Camera: ...]` blocks.
 Add `--enable-repair` to run Turn 3 repair after a Turn 2 miss.
 See `wac-bench --help` for the full flag list.
 

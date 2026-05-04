@@ -119,7 +119,6 @@ def _make_scenario(
     turn_2_user: str = "What about now?",
     turn_3_repair_prompt: str = "I mean the object I'm holding now.",
     context_image: str | None = None,
-    subset: str = "bank",
     pair_id: str | None = None,
     gold: AnswerSet | None = None,
 ) -> Scenario:
@@ -136,7 +135,6 @@ def _make_scenario(
         turn_2_user=turn_2_user,
         turn_3_repair_prompt=turn_3_repair_prompt,
         context_image=context_image,
-        subset=subset,
         pair_id=pair_id,
         gold=gold or AnswerSet(),
     )
@@ -157,7 +155,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
         config={"output_dir": str(output_dir)},
     )
 
-    scenario_count = len(run_module.load_scenarios(subset="bank"))
+    scenario_count = len(run_module.load_scenarios())
     condition_count = len(run_module.load_prompt_conditions(run_module.PROMPT_CONDITIONS_PATH))
     expected_trials = scenario_count * condition_count * run_module.CONFIG["trials_per_cell"]
     assert len(results) == expected_trials
@@ -171,7 +169,6 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
         payload = json.loads(line)
         for required in (
             "scenario_id",
-            "subset",
             "pair_id",
             "condition",
             "trial",
@@ -190,7 +187,6 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "turn_3_repair_passed",
         ):
             assert required in payload, f"missing {required} in transcript row"
-        assert payload["subset"] == "bank"
 
 
 def test_run_default_repair_disabled_records_no_repair_attempts(
@@ -281,7 +277,6 @@ def test_run_emits_summary_json(tmp_path: Path) -> None:
     assert payload["n_scenarios"] > 0
     assert "primary_score_mean_recall" in payload
     assert "per_class_recall" in payload
-    assert "per_subset_recall" in payload
     assert "config_snapshot" in payload
     assert payload["config_snapshot"]["enable_repair"] is False
 
@@ -356,42 +351,14 @@ def test_config_overrides_from_args_full() -> None:
     }
 
 
-def test_parse_args_accepts_pack_flag_contrast() -> None:
-    args = run_module._parse_args(["--subset", "contrast"])
-    assert args.subset == "contrast"
-    overrides = run_module._config_overrides_from_args(args)
-    assert overrides == {"subset": "contrast"}
-
-
-def test_parse_args_rejects_legacy_pack_values() -> None:
-    """`adversarial` and `hard` were renamed/removed; only `bank` and
-    `contrast` remain valid."""
-    with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "adversarial"])
-    with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "hard"])
-
-
-def test_contrast_pack_loads_with_distinct_ids(tmp_path: Path) -> None:
-    """Contrast-pack scenarios have ids ``adv-*`` and load via ``--subset contrast``."""
-    adapter = _StubAdapter()
-    judge = _StubJudge()
-    output_dir = tmp_path / "contrast"
-    results = run_module.run(
-        adapter=adapter,
-        judge=judge,
-        config={"output_dir": str(output_dir), "subset": "contrast"},
-    )
-    ids = {r["scenario_id"] for r in results}
-    assert all(sid.startswith("adv-") for sid in ids)
-    assert len(ids) == 20
-    findings = (output_dir / "findings.md").read_text(encoding="utf-8")
-    import re as _re
-
-    match = _re.search(r"```json\n(.*?)\n```", findings, _re.DOTALL)
-    assert match is not None
-    payload = json.loads(match.group(1))
-    assert payload["subset"] == "contrast"
+def test_adv_prefixed_scenarios_load_in_unified_bank(tmp_path: Path) -> None:
+    """After contrast retirement, ``adv-*`` ids live in the unified bank
+    alongside ``sc-*`` ids. There's no longer a subset filter."""
+    scenarios = run_module.load_scenarios()
+    ids = {s.scenario_id for s in scenarios}
+    assert any(sid.startswith("adv-") for sid in ids)
+    assert any(sid.startswith("sc-") for sid in ids)
+    assert len(ids) == 70
 
 
 def test_manifest_records_schema_fields(tmp_path: Path) -> None:
@@ -412,7 +379,6 @@ def test_manifest_records_schema_fields(tmp_path: Path) -> None:
     assert payload["schema_revision"] == 1
     assert payload["camera_injection"] is True
     assert payload["enable_repair"] is False
-    assert payload["subset"] == "bank"
     assert "ranking_judge_model" in payload
     assert "ranking_judge_family" in payload
     assert payload["ranking_judge_model"] is None
@@ -501,7 +467,7 @@ def test_parse_args_accepts_repair_style_flag() -> None:
 
 
 def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+    scenarios = run_module.load_scenarios()
     visible = {
         "object_in_hand",
         "object_in_view",
@@ -521,7 +487,7 @@ def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
 
 
 def test_committed_bank_omits_deictic_for_non_visible_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+    scenarios = run_module.load_scenarios()
     bad = [
         s.scenario_id
         for s in scenarios
@@ -555,7 +521,6 @@ def test_load_runtime_config_reads_json_file() -> None:
     cfg = run_module.load_runtime_config()
     assert cfg["trials_per_cell"] == 1
     assert cfg["enable_repair"] is False
-    assert cfg["subset"] == "bank"
 
 
 # ---------------------------------------------------------------------------

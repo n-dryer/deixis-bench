@@ -7,30 +7,24 @@ benchmark:
 1. **Benchmark summary.** Headline primary score (mean of per-class
    recall under the default comparison condition), per-class recall
    for ``current`` and ``prior``, and a per-condition sensitivity row.
-2. **Per-pack recall.** Mean recall sliced by pack (``bank`` /
-   ``contrast``).
-3. **Per change-type recall.** Mean recall sliced by ``change_type``.
-4. **Contrast pair consistency.** Percentage of A/B pairs in the
-   contrast pack where both variants pass. Reported only when
-   ``pair_id`` metadata is present.
-5. **Per-class pass rate by condition.** A 4-row internal grid for
+2. **Per change-type recall.** Mean recall sliced by ``change_type``.
+3. **Per-class pass rate by condition.** A 4-row internal grid for
    visibility. ``current`` and ``prior`` are the primary classes.
    ``clarify`` and ``abstain`` are auxiliary diagnostic classes and
    are not included in the primary score.
-6. **Simulated repair rate per condition** (only when ``--enable-repair``
+4. **Simulated repair rate per condition** (only when ``--enable-repair``
    was set).
-7. **Hedging behavior.** Clarification rate, abstention rate, and the
+5. **Hedging behavior.** Clarification rate, abstention rate, and the
    coverage metric ``1 - (clarify_rate + abstain_rate)``.
-8. **Code-judge disagreement count per scenario.**
-9. **Inter-judge agreement (cross-LLM).**
-10. **Scenario-by-condition matrix.**
-11. **Reproducibility manifest.** A JSON block with the scenario /
+6. **Code-judge disagreement count per scenario.**
+7. **Inter-judge agreement (cross-LLM).**
+8. **Scenario-by-condition matrix.**
+9. **Reproducibility manifest.** A JSON block with the scenario /
     interventions / judge-prompt SHAs, model strings, trials,
     temperature, and the default comparison condition.
 
 Expected per-trial result dict keys:
     scenario_id (str)
-    subset (str): "bank" or "contrast"
     pair_id (str | None)
     target_context (str): one of "current", "prior", "clarify", "abstain"
     change_type (str)
@@ -340,26 +334,6 @@ def mean_recall_with_bootstrap_ci_under_condition(
     return point, bootstraps[lo_idx], bootstraps[hi_idx]
 
 
-def recall_by_subset(
-    results: list[dict],
-    condition: str,
-) -> dict[str, tuple[float, float, float] | None]:
-    """Mean per-class recall sliced by pack (``bank`` / ``contrast``).
-
-    Returns a dict keyed on pack name. Each value is
-    ``(mean, lo, hi)`` from the normal-approximation CI, or ``None``
-    when one of the scored classes has no trials in that pack.
-    """
-    by_pack: dict[str, list[dict]] = defaultdict(list)
-    for trial in results:
-        pack = trial.get("subset") or "bank"
-        by_pack[pack].append(trial)
-    return {
-        pack: mean_recall_with_ci_under_condition(trials, condition)
-        for pack, trials in by_pack.items()
-    }
-
-
 def recall_by_change_type(
     results: list[dict],
     condition: str,
@@ -382,55 +356,6 @@ def recall_by_change_type(
         passed = sum(1 for t in trials if bool(t["turn_2_passed"]))
         out[cue] = wilson_interval(passed, len(trials))
     return out
-
-
-def contrast_pair_consistency(
-    results: list[dict],
-    condition: str | None = None,
-) -> dict[str, Any]:
-    """Pair-consistency rate over the contrast pack.
-
-    Groups contrast-pack trials by ``pair_id`` and computes the share
-    of pairs where every member trial passed Turn 2. Trials with no
-    ``pair_id`` are ignored. When ``condition`` is non-None, only
-    trials in that condition contribute.
-
-    Returns a dict with:
-        ``pairs_evaluated`` (int)
-        ``consistency_rate`` (float | None)
-        ``ci`` (tuple[float, float] | None) — Wilson CI bounds
-        ``note`` (str) — set when no pair_id metadata is present
-    """
-    pairs: dict[str, list[bool]] = defaultdict(list)
-    for trial in results:
-        if (trial.get("subset") or "bank") != "contrast":
-            continue
-        if condition is not None and trial["condition"] != condition:
-            continue
-        pair_id = trial.get("pair_id")
-        if not pair_id:
-            continue
-        pairs[pair_id].append(bool(trial["turn_2_passed"]))
-    if not pairs:
-        return {
-            "pairs_evaluated": 0,
-            "consistency_rate": None,
-            "ci": None,
-            "note": (
-                "no pair_id metadata in current contrast pack; "
-                "metric not applicable"
-            ),
-        }
-    consistent = sum(1 for outcomes in pairs.values() if all(outcomes))
-    total = len(pairs)
-    triple = wilson_interval(consistent, total)
-    ci = None if triple is None else (triple[1], triple[2])
-    return {
-        "pairs_evaluated": total,
-        "consistency_rate": consistent / total,
-        "ci": ci,
-        "note": "",
-    }
 
 
 def clarify_rate(
@@ -502,7 +427,6 @@ def build_run_summary_dict(
 
     primary = mean_recall_with_ci_under_condition(results, ranking_condition)
     per_class = class_recall_with_ci_under_condition(results, ranking_condition)
-    per_pack = recall_by_subset(results, ranking_condition)
     return {
         "run_label": run_label,
         "n_trials": len(results),
@@ -515,9 +439,6 @@ def build_run_summary_dict(
         "per_class_recall": {
             policy: _ci(triple) for policy, triple in per_class.items()
         },
-        "per_subset_recall": {
-            pack: _ci(triple) for pack, triple in per_pack.items()
-        },
         "clarify_rate": _ci(clarify_rate(results, ranking_condition)),
         "abstain_rate": _ci(abstain_rate(results, ranking_condition)),
         "coverage_rate": _ci(coverage_rate(results, ranking_condition)),
@@ -529,7 +450,6 @@ def build_run_summary_dict(
         "config_snapshot": {
             "trials": manifest.get("trials"),
             "temperature": manifest.get("temperature"),
-            "subset": manifest.get("subset"),
             "no_camera": manifest.get("camera_injection") is False,
             "enable_repair": manifest.get("enable_repair"),
         },
@@ -754,9 +674,7 @@ def render_findings_markdown(
         condition: mean_recall_with_ci_under_condition(results, condition)
         for condition in conditions
     }
-    per_subset_recall_ci = recall_by_subset(results, ranking_condition)
     per_cue_recall_ci = recall_by_change_type(results, ranking_condition)
-    pair_consistency = contrast_pair_consistency(results, ranking_condition)
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
     coverage_ci = coverage_rate(results, ranking_condition)
@@ -780,17 +698,9 @@ def render_findings_markdown(
             per_condition_recall_ci=per_condition_recall_ci,
         ),
         "",
-        "## Per-subset recall",
-        "",
-        _render_per_subset_table(per_subset_recall_ci),
-        "",
         "## Per change-type recall",
         "",
         _render_per_cue_table(per_cue_recall_ci),
-        "",
-        "## Contrast pair consistency",
-        "",
-        _render_pair_consistency(pair_consistency),
         "",
         "## Per-class pass rate by condition",
         "",
@@ -881,24 +791,6 @@ def _render_benchmark_summary(
     return "\n".join(lines)
 
 
-def _render_per_subset_table(
-    per_pack: dict[str, tuple[float, float, float] | None],
-) -> str:
-    if not per_pack:
-        return "_No trials recorded._"
-
-    def _ci(triple: tuple[float, float, float] | None) -> str:
-        if triple is None:
-            return "n/a"
-        rate, lo, hi = triple
-        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
-
-    rows = ["| Subset | Mean recall (95% CI) |", "| --- | --- |"]
-    for pack in sorted(per_pack.keys()):
-        rows.append(f"| `{pack}` | {_ci(per_pack[pack])} |")
-    return "\n".join(rows)
-
-
 def _render_per_cue_table(
     per_cue: dict[str, tuple[float, float, float] | None],
 ) -> str:
@@ -915,24 +807,6 @@ def _render_per_cue_table(
     for cue in sorted(per_cue.keys()):
         rows.append(f"| `{cue}` | {_ci(per_cue[cue])} |")
     return "\n".join(rows)
-
-
-def _render_pair_consistency(payload: dict[str, Any]) -> str:
-    if payload.get("pairs_evaluated", 0) == 0:
-        note = payload.get("note") or "no pair_id metadata available"
-        return f"_{note}_"
-    rate = payload["consistency_rate"]
-    ci = payload.get("ci")
-    rate_pct = f"{rate * 100:.1f}%"
-    if ci is None:
-        ci_part = ""
-    else:
-        lo, hi = ci
-        ci_part = f" (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
-    return (
-        f"- **Pairs evaluated**: {payload['pairs_evaluated']}\n"
-        f"- **Both-correct rate**: {rate_pct}{ci_part}"
-    )
 
 
 def _render_hedging_section(

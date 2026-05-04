@@ -156,10 +156,9 @@ primary_score = mean(current_recall, prior_recall)
 
 The primary metric is reported with both a 95% normal-approximation CI
 and a 95% percentile bootstrap CI; per-class numbers carry 95% Wilson
-CIs. The findings template additionally reports per-pack recall
-(bank vs contrast), per change-type recall (`change_type`), contrast
-pair consistency (when `pair_id` metadata is present), and hedging
-behavior (clarification rate, abstention rate, coverage).
+CIs. The findings template additionally reports per-change-type recall
+(`change_type`) and hedging behavior (clarification rate, abstention
+rate, coverage).
 
 `clarify` and `abstain` rates appear in the findings output as
 auxiliary diagnostic rows. They do not enter the primary number.
@@ -236,7 +235,6 @@ manifest fields include:
 - `benchmark_version`: the runner code version
 - `schema_revision`: scenario data-format counter (integer)
 - `camera_injection`: boolean; always `true`
-- `subset`: `"bank"` or `"contrast"`, naming the subset the run evaluated
 - `scenarios_sha256`: hash of `data/scenarios.jsonl`
 - `interventions_sha256`: hash of `data/prompt_conditions.json`
 - `judge_prompt_version`, `judge_prompt_sha256`: judge prompt
@@ -270,8 +268,6 @@ The runner loads its defaults from `data/config.json`. Key defaults:
 
 - `trials_per_cell: 1`
 - `enable_repair: false`. The Turn 3 repair turn is opt-in.
-- `subset: "bank"`. Use `--subset contrast` for the 20-scenario
-  subset.
 - `temperature: 0.0`.
 
 CLI flags override the config file. Use `--config <path>` to point at

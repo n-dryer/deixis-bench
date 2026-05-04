@@ -100,10 +100,6 @@ CONFIG: dict[str, Any] = {
     # is recorded as-is with no repair attempt. When True, the runner
     # fires the templated repair anchor and labels the Turn 3 response.
     "enable_repair": False,
-    # Scenario subset to evaluate. `bank` is the frozen 50-scenario
-    # bank. `contrast` is the separately-tagged 20-scenario
-    # distractor-rich subset of controlled minimal pairs.
-    "subset": "bank",
 }
 
 
@@ -139,8 +135,9 @@ class Scenario:
 
     JSON line schema (one object per line):
         scenario_id: str
-        subset: str   # "bank" or "contrast"
-        pair_id: str | None  # optional contrast-pair grouping key
+        pair_id: str | None  # optional pair-grouping key (currently
+            null in all rows; reserved for a future contrast-set
+            companion if/when paired-twin analysis is reactivated)
         target_context: str  # current | prior | clarify | abstain
         change_type: str        # one of the eight change_type values
         activity_domain: str
@@ -176,7 +173,6 @@ class Scenario:
     turn_2_image: str
     turn_2_user: str
     turn_3_repair_prompt: str
-    subset: str = "bank"
     pair_id: str | None = None
     context_image: str | None = None
     time_gap_bucket: str | None = None
@@ -185,13 +181,10 @@ class Scenario:
     gold: AnswerSet = field(default_factory=AnswerSet)
 
 
-def load_scenarios(
-    path: Path = SCENARIOS_PATH, subset: str | None = None
-) -> list[Scenario]:
-    """Load scenarios from ``scenarios.jsonl``, optionally filtered by subset.
+def load_scenarios(path: Path = SCENARIOS_PATH) -> list[Scenario]:
+    """Load all scenarios from ``scenarios.jsonl``.
 
-    Each line is one JSON object. When ``subset`` is non-None, only
-    records whose ``subset`` field matches are returned.
+    Each line is one JSON object. Returns the full unified bank.
     """
     scenarios: list[Scenario] = []
     with path.open("r", encoding="utf-8") as f:
@@ -200,8 +193,6 @@ def load_scenarios(
             if not line:
                 continue
             entry = json.loads(line)
-            if subset is not None and entry.get("subset") != subset:
-                continue
             gold_raw = entry.get("gold") or {}
             gold = AnswerSet(
                 current_answers=list(gold_raw.get("current_answers") or []),
@@ -212,7 +203,6 @@ def load_scenarios(
             scenarios.append(
                 Scenario(
                     scenario_id=entry["scenario_id"],
-                    subset=entry.get("subset", "bank"),
                     pair_id=entry.get("pair_id"),
                     target_context=entry["target_context"],
                     change_type=entry["change_type"],
@@ -305,12 +295,9 @@ def _build_manifest(
         JUDGE_SYSTEM_PROMPT.encode("utf-8")
     ).hexdigest()
 
-    pack = effective_config.get("subset", "bank")
-
     manifest: dict[str, Any] = {
         "benchmark_version": BENCHMARK_VERSION,
         "schema_revision": SCHEMA_REVISION,
-        "subset": pack,
         "camera_injection": not bool(effective_config.get("no_camera", False)),
         "scenarios_sha256": _sha_or_warn(SCENARIOS_PATH, "scenarios_sha256"),
         "prompt_conditions_sha256": _sha_or_warn(
@@ -371,8 +358,7 @@ def run(
     """
     effective_config = {**CONFIG, **(config or {})}
 
-    pack = effective_config.get("subset", "bank")
-    scenarios = load_scenarios(SCENARIOS_PATH, subset=pack)
+    scenarios = load_scenarios(SCENARIOS_PATH)
     conditions = load_prompt_conditions(PROMPT_CONDITIONS_PATH)
 
     model_config = ModelConfig(
@@ -610,7 +596,6 @@ def _run_one_trial(
 
     result: dict[str, Any] = {
         "scenario_id": scenario.scenario_id,
-        "subset": scenario.subset,
         "pair_id": scenario.pair_id,
         "condition": condition.name,
         "trial": trial,
@@ -864,18 +849,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--subset",
-        dest="subset",
-        choices=["bank", "contrast"],
-        default=None,
-        help=(
-            "Scenario subset to run. `bank` is the frozen 50-scenario "
-            "scenario bank; `contrast` is the separately-tagged "
-            "20-scenario distractor-rich subset of controlled minimal "
-            "pairs. Defaults to bank."
-        ),
-    )
-    parser.add_argument(
         "--repair-style",
         dest="repair_style",
         choices=["named", "deictic"],
@@ -914,8 +887,6 @@ def _config_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
         overrides["no_camera"] = True
     if getattr(args, "repair_style", None) is not None:
         overrides["repair_style"] = args.repair_style
-    if getattr(args, "subset", None) is not None:
-        overrides["subset"] = args.subset
     if getattr(args, "enable_repair", False):
         overrides["enable_repair"] = True
     return overrides

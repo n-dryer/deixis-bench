@@ -9,6 +9,5 @@
   "ranking_condition": "baseline",
   "no_camera": false,
   "repair_style": "named",
-  "enable_repair": false,
-  "subset": "bank"
+  "enable_repair": false
 }

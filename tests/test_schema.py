@@ -22,7 +22,6 @@ SCENARIOS_PATH = REPO_ROOT / "data" / "scenarios.jsonl"
 
 REQUIRED_FIELDS = {
     "scenario_id",
-    "subset",
     "target_context",
     "change_type",
     "activity_domain",
@@ -56,8 +55,6 @@ ALLOWED_COGNITIVE_LOADS = {
     "distractor_present",
     "referent_offscreen",
 }
-ALLOWED_PACKS = {"bank", "contrast"}
-
 # Closed enum for activity_domain. Source of truth lives next to the validator
 # in scripts/validate_scenarios.py (V1 check). Tests load the same set so a
 # domain rename only needs one update.
@@ -104,16 +101,6 @@ def all_records() -> list[dict]:
     return _load_records()
 
 
-@pytest.fixture(scope="module")
-def bank(all_records: list[dict]) -> list[dict]:
-    return [r for r in all_records if r.get("subset") == "bank"]
-
-
-@pytest.fixture(scope="module")
-def contrast(all_records: list[dict]) -> list[dict]:
-    return [r for r in all_records if r.get("subset") == "contrast"]
-
-
 # ---------------------------------------------------------------------------
 # Schema contract (was tests/test_scenarios_config.py)
 # ---------------------------------------------------------------------------
@@ -150,10 +137,16 @@ def test_target_contexts_in_allowed_set(all_records: list[dict]) -> None:
         )
 
 
-def test_packs_in_allowed_set(all_records: list[dict]) -> None:
+def test_subset_field_is_absent(all_records: list[dict]) -> None:
+    """Post-retirement: the `subset` field should not appear in any row.
+
+    Catches regressions where someone re-introduces a subset split (which
+    we deliberately retired in favor of a single unified bank).
+    """
     for entry in all_records:
-        assert entry["subset"] in ALLOWED_PACKS, (
-            f"{entry['scenario_id']}: unexpected subset {entry['subset']!r}"
+        assert "subset" not in entry, (
+            f"{entry['scenario_id']}: `subset` field reappeared "
+            "(was retired with the contrast/bank split)"
         )
 
 
@@ -369,29 +362,29 @@ def _format_fails(fails: list[dict]) -> str:
     return "\n".join(f"  [{f['check']}] {f['scenario_id']}: {f['detail']}" for f in fails)
 
 
-def test_check_1_token_leakage_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_1_token_leakage(bank)
+def test_check_1_token_leakage_passes(all_records: list[dict]) -> None:
+    fails = validate_scenarios.check_1_token_leakage(all_records)
     assert not fails, (
         f"check_1_token_leakage produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_2_object_names_in_images_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_2_object_name_in_images(bank)
+def test_check_2_object_names_in_images_passes(all_records: list[dict]) -> None:
+    fails = validate_scenarios.check_2_object_name_in_images(all_records)
     assert not fails, (
         f"check_2_object_name_in_images produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_3_schema_validation_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_3_schema_validation(bank)
+def test_check_3_schema_validation_passes(all_records: list[dict]) -> None:
+    fails = validate_scenarios.check_3_schema_validation(all_records)
     assert not fails, (
         f"check_3_schema_validation produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )
 
 
-def test_check_6_duplication_passes(bank: list[dict]) -> None:
-    fails = validate_scenarios.check_6_duplication(bank)
+def test_check_6_duplication_passes(all_records: list[dict]) -> None:
+    fails = validate_scenarios.check_6_duplication(all_records)
     assert not fails, (
         f"check_6_duplication produced {len(fails)} failure(s):\n{_format_fails(fails)}"
     )

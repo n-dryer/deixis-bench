@@ -61,6 +61,12 @@ NON_DEICTIC_CHANGE_TYPES: frozenset[str] = frozenset({
 # manual review check — but a floor of 7 makes the convention auditable.
 GOLD_LIST_MIN_ITEMS = 7
 
+# Per-``change_type`` bucket floor. Replaces the prior exact-count
+# distribution pin that assumed a frozen 50-scenario bank. As the bank
+# expands toward 166 scenarios (with ~20 per bucket), this floor will
+# rise. Today's minimum is 4 (cross_session_reference).
+MIN_CHANGE_TYPE_COUNT = 4
+
 # Common-object blocklist for image descriptions. Image descriptions must
 # NOT name the object directly. This list is non-exhaustive but catches
 # obvious cases.
@@ -180,7 +186,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
     """
     fails = []
     required_scenario_fields = {
-        "scenario_id", "subset", "target_context", "change_type", "activity_domain",
+        "scenario_id", "target_context", "change_type", "activity_domain",
         "referent_complexity", "difficulty_tier",
         "context_image", "turn_1_image", "turn_1_user",
         "turn_2_image", "turn_2_user", "turn_3_repair_prompt",
@@ -197,7 +203,6 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "referent_offscreen",
     }
     valid_difficulty = {"easy", "medium", "hard"}
-    valid_subset = {"bank", "contrast"}
 
     seen_ids = set()
     for sc in scenarios:
@@ -219,12 +224,6 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
             })
         seen_ids.add(sid)
         # Enum validation
-        if sc.get("subset") not in valid_subset:
-            fails.append({
-                "scenario_id": sid,
-                "check": "schema",
-                "detail": f"invalid subset: {sc.get('subset')!r}",
-            })
         if sc.get("target_context") not in valid_target_context:
             fails.append({
                 "scenario_id": sid,
@@ -400,20 +399,24 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                     ),
                 })
 
-    # Distribution checks (bank only).
+    # Distribution check: every change_type bucket has at least
+    # ``min_change_type_count`` scenarios. Replaces the prior pinned-counts
+    # check (which became obsolete when the bank/contrast subset split was
+    # retired and the bank started growing). The floor rises as the bank
+    # grows toward its 166-scenario target (~20+ per bucket).
     if enforce_distribution:
         cue_counts = Counter(sc.get("change_type") for sc in scenarios)
-        expected_cue_counts = {
-            "object_in_hand": 12, "object_state": 8, "sequential_task": 6,
-            "location": 6, "object_in_view": 5, "absent_referent": 5,
-            "screen_content": 4, "cross_session_reference": 4,
-        }
-        for cue, expected_count in expected_cue_counts.items():
-            if cue_counts[cue] != expected_count:
+        min_count = MIN_CHANGE_TYPE_COUNT
+        for cue in valid_change_type:
+            n = cue_counts.get(cue, 0)
+            if n < min_count:
                 fails.append({
                     "scenario_id": "<bank>",
                     "check": "schema",
-                    "detail": f"change_type {cue} count {cue_counts[cue]} does not match expected {expected_count}",
+                    "detail": (
+                        f"change_type {cue!r} has only {n} scenarios; "
+                        f"floor is {min_count}"
+                    ),
                 })
 
     return fails
@@ -547,34 +550,22 @@ def main() -> int:
     args = parser.parse_args()
 
     all_records = _load_scenarios_jsonl(SCENARIOS_PATH)
-    bank = [r for r in all_records if r.get("subset") == "bank"]
-    contrast = [r for r in all_records if r.get("subset") == "contrast"]
 
     all_fails = []
-    # Bank checks (with change_type distribution enforcement)
-    all_fails.extend(check_1_token_leakage(bank))
-    all_fails.extend(check_2_object_name_in_images(bank))
-    all_fails.extend(check_3_schema_validation(bank, enforce_distribution=True))
-    all_fails.extend(check_6_duplication(bank))
+    all_fails.extend(check_1_token_leakage(all_records))
+    all_fails.extend(check_2_object_name_in_images(all_records))
+    all_fails.extend(
+        check_3_schema_validation(all_records, enforce_distribution=True)
+    )
+    all_fails.extend(check_6_duplication(all_records))
     all_fails.extend(check_7_lockfile_drift())
-
-    # Contrast pack: same checks except change_type distribution.
-    if contrast:
-        all_fails.extend(check_1_token_leakage(contrast))
-        all_fails.extend(check_2_object_name_in_images(contrast))
-        all_fails.extend(
-            check_3_schema_validation(contrast, enforce_distribution=False)
-        )
-        all_fails.extend(check_6_duplication(contrast))
 
     if args.json:
         print(json.dumps(all_fails, indent=2, ensure_ascii=False))
     else:
         if not all_fails:
-            contrast_note = f" + {len(contrast)} contrast" if contrast else ""
             print(
-                f"All checks passed ({len(bank)} bank{contrast_note} "
-                "scenarios validated)."
+                f"All checks passed ({len(all_records)} scenarios validated)."
             )
         else:
             print(f"{len(all_fails)} validation failure(s):")

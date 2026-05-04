@@ -42,7 +42,7 @@ A reference whose meaning depends on the situational context — gesture, gaze, 
 One conversational unit. Three turns: optional pre-conversation frame, Turn 1 (initial state), Turn 2 (after a context shift), and a Turn 3 repair prompt fired only when `--enable-repair` is set. Stored as one JSON line in `data/scenarios.jsonl`.
 
 ### `scenario_id`
-Unique identifier for a scenario. Format `sc-NN` for the bank, `adv-NN` for the contrast subset.
+Unique identifier for a scenario. Format `sc-NN` or `adv-NN`. Both prefixes are first-class scenarios in the unified bank; the `adv-NN` rows were authored under an earlier "contrast" subset that has since been retired in favor of a single bank.
 
 ### Test scenarios
 Synonym for the published scenarios in `data/scenarios.jsonl`. The benchmark is an evaluation set — there is no train/val/test split; every scenario is for inference and labeling.
@@ -54,16 +54,10 @@ Synonym for the published scenarios in `data/scenarios.jsonl`. The benchmark is 
 ## The dataset
 
 <details>
-<summary><strong>Subsets, scenario fields, and how scenarios are categorized</strong></summary>
+<summary><strong>Scenario fields and how scenarios are categorized</strong></summary>
 
-### Subset
-A grouping of scenarios. The `subset` field on every scenario marks which one it belongs to. Two subsets: `bank` and `contrast`. Filterable on the runner via `--subset {bank,contrast}`.
-
-### `bank` (Scenario Bank)
-The primary 50-scenario subset. Distribution is pinned: 12 / 8 / 6 / 6 / 5 / 5 / 4 / 4 across the 8 change types.
-
-### `contrast` (Contrast Subset)
-A 20-scenario subset of distractor-rich minimal pairs. The earlier object or scene may still be visible at Turn 2.
+### Bank
+The full set of scenarios in `data/scenarios.jsonl`. A single unified bank — there are no subset splits today. (The benchmark previously split scenarios into a 50-row primary `bank` and a 20-row distractor-rich `contrast` pack, with the `contrast` pack reserved for paired-twin robustness analysis. The pair-twin metric was never activated, so the split was retired and all 70 scenarios now live in one bank.)
 
 ### `change_type`
 The category of context shift between Turn 1 and Turn 2. One of eight values:
@@ -86,13 +80,13 @@ The grounding target a well-functioning assistant should pick. One of `current`,
 Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `referent_offscreen`. Affects how hard the scenario is to disambiguate. (`referent_offscreen` was renamed from the prior `absent_referent` value to avoid collision with the `change_type` value of the same name.)
 
 ### `difficulty_tier`
-Author-assigned difficulty. One of `easy`, `medium`, `hard`. The bank pins distribution at 15 / 20 / 15.
+Author-assigned difficulty. One of `easy`, `medium`, `hard`.
 
 ### `time_gap_bucket`
 Approximate time between Turn 1 and Turn 2: `seconds`, `minutes`, `hours`, or `next_day`. Null when none of the four buckets applies — i.e., the gap is short enough to count as the same continuous segment of activity.
 
 ### `pair_id`
-Optional grouping key for contrast A/B pairs. When populated, the report computes pair consistency.
+Optional grouping key reserved for a future paired-twin contrast companion. Null in all current rows; the runner does not use it.
 
 </details>
 
@@ -233,19 +227,13 @@ Per-class recall. `current_recall` = trials with `target_context == "current"` t
 Mean of the per-class recalls. The headline number for a run.
 
 ### Wilson CI
-Wilson score confidence interval for a binomial proportion. Used for per-class recall, per-subset recall, per-change-type recall. Well-calibrated for small N and proportions near 0 or 1; unlike the Wald (normal) approximation, Wilson never overshoots [0, 1].
+Wilson score confidence interval for a binomial proportion. Used for per-class recall and per-change-type recall. Well-calibrated for small N and proportions near 0 or 1; unlike the Wald (normal) approximation, Wilson never overshoots [0, 1].
 
 ### Bootstrap CI
 Non-parametric percentile bootstrap. Reported alongside Wilson on the primary metric (mean of two proportions, where Wilson is awkward).
 
-### Per-subset recall
-Mean recall sliced by `subset`. Lets you compare how a model holds up on `bank` vs `contrast`.
-
 ### Per-change-type recall
 Pass rate sliced by `change_type`. Surfaces categories the model handles well vs poorly.
-
-### Contrast pair consistency
-Among contrast-subset scenarios that share a `pair_id`, the share of pairs where every member trial passes. Reported only when `pair_id` metadata is populated.
 
 ### Hedging behavior
 Three rates that surface how often the candidate refuses to commit:
@@ -281,13 +269,13 @@ One execution of the runner. Identified by its `output_dir`.
 Per-trial result dicts, one per line. Gitignored; regenerate by re-running the matching command.
 
 ### `findings.md`
-Auto-generated Markdown report rendered by `wearable_assistant_context_bench.report.render_findings_markdown`. Includes the benchmark summary, per-class / per-subset / per-change-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
+Auto-generated Markdown report rendered by `wearable_assistant_context_bench.report.render_findings_markdown`. Includes the benchmark summary, per-class and per-change-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
 
 ### `summary.json`
 Machine-readable companion to `findings.md`. Aggregate metrics + manifest in JSON for downstream tooling. Committed alongside `findings.md`; transcripts are not.
 
 ### Reproducibility manifest
-A JSON block embedded in every `findings.md` (and a `manifest_versions` field in every `summary.json`). Names the benchmark version, judge prompt version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, subset, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
+A JSON block embedded in every `findings.md` (and a `manifest_versions` field in every `summary.json`). Names the benchmark version, judge prompt version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
 
 ### Ablation
 A category of run that holds everything constant except one variable to measure that variable's contribution.

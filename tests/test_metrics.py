@@ -24,7 +24,6 @@ from wearable_assistant_context_bench.report import (
     class_recall_with_ci_under_condition,
     code_judge_disagreement_by_scenario,
     cohens_kappa,
-    contrast_pair_consistency,
     coverage_rate,
     inter_judge_agreement_summary,
     inter_judge_disagreement_by_scenario,
@@ -33,7 +32,6 @@ from wearable_assistant_context_bench.report import (
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
     recall_by_change_type,
-    recall_by_subset,
     render_findings_markdown,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
@@ -236,13 +234,11 @@ def _trial(
     turn_2_code_signals: dict | None = None,
     turn_3_repair_attempted: bool = False,
     turn_3_repair_passed: bool | None = None,
-    subset: str = "bank",
     pair_id: str | None = None,
     change_type: str = "object_in_hand",
 ) -> dict:
     return {
         "scenario_id": scenario_id,
-        "subset": subset,
         "pair_id": pair_id,
         "change_type": change_type,
         "condition": condition,
@@ -390,16 +386,6 @@ def test_mean_recall_penalizes_clarify_abstain_as_wrong() -> None:
     assert mean_recall_under_condition(results, "baseline") == pytest.approx(0.5)
 
 
-def test_recall_by_subset_splits_bank_and_contrast() -> None:
-    results = _fixture_results()
-    # Mark a few trials as contrast pack.
-    for i in range(0, 4):
-        results[i]["subset"] = "contrast"
-    by_pack = recall_by_subset(results, "baseline")
-    assert "bank" in by_pack
-    assert "contrast" in by_pack
-
-
 def test_recall_by_change_type_buckets_correctly() -> None:
     results = _fixture_results()
     # Tag two trials with a different cue type so the dict has 2 keys.
@@ -408,32 +394,6 @@ def test_recall_by_change_type_buckets_correctly() -> None:
     out = recall_by_change_type(results, "baseline")
     assert "object_in_hand" in out
     assert "object_state" in out
-
-
-def test_contrast_pair_consistency_returns_note_when_no_pair_ids() -> None:
-    results = _fixture_results()
-    payload = contrast_pair_consistency(results, "baseline")
-    assert payload["pairs_evaluated"] == 0
-    assert "no pair_id metadata" in payload["note"]
-
-
-def test_contrast_pair_consistency_counts_pairs_when_metadata_present() -> None:
-    results = []
-    for sid, passed in [("adv-01", True), ("adv-02", False)]:
-        results.append(
-            _trial(
-                scenario_id=sid,
-                condition="baseline",
-                trial=0,
-                target_context="current",
-                turn_2_passed=passed,
-                subset="contrast",
-                pair_id="pair-1",
-            )
-        )
-    payload = contrast_pair_consistency(results, "baseline")
-    assert payload["pairs_evaluated"] == 1
-    assert payload["consistency_rate"] == 0.0
 
 
 def test_clarify_and_abstain_and_coverage_rates() -> None:
@@ -549,9 +509,7 @@ def test_render_findings_markdown_shape() -> None:
     assert BENCHMARK_LABEL in output
     assert "Benchmark summary" in output
     assert "Per-class pass rate" in output
-    assert "Per-subset recall" in output
     assert "Per change-type recall" in output
-    assert "Contrast pair consistency" in output
     assert "Hedging behavior" in output
     assert "Code-judge disagreement" in output
     assert "Scenario-by-condition matrix" in output
