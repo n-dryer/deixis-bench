@@ -968,5 +968,101 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-151": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-152": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'eye level' → 'eye height'; gold tokens overlapping context_image dropped)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-153": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-154": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'palette' → 'mixing tray')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-155": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'easel' → 'A-frame'; gold overlaps dropped)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-156": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-157": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-158": {
+    "batch": "8a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
   }
 }
