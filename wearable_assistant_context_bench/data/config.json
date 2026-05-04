@@ -1,0 +1,14 @@
+{
+  "model_id": "claude-sonnet-4-6",
+  "judge_model_id": null,
+  "judge_family": "auto",
+  "ranking_judge_family": null,
+  "ranking_judge_model_id": null,
+  "temperature": 0.0,
+  "trials_per_cell": 1,
+  "ranking_condition": "baseline",
+  "no_camera": false,
+  "repair_style": "named",
+  "enable_repair": false,
+  "subset": "main"
+}

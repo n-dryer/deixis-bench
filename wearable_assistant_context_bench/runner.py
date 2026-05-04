@@ -22,6 +22,8 @@ import json
 import subprocess
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
@@ -57,12 +59,27 @@ from wearable_assistant_context_bench.prompt_conditions import (
 from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import score_response
 
+ResourcePath = Path | Traversable
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = REPO_ROOT / "data"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "runs" / "latest"
-SCENARIOS_PATH = DATA_DIR / "scenarios.jsonl"
-PROMPT_CONDITIONS_PATH = DATA_DIR / "prompt_conditions.json"
-DEFAULT_CONFIG_PATH = DATA_DIR / "config.json"
+SOURCE_DATA_DIR = REPO_ROOT / "data"
+PACKAGED_DATA_DIR = files("wearable_assistant_context_bench").joinpath("data")
+DATA_DIR: ResourcePath = (
+    SOURCE_DATA_DIR if SOURCE_DATA_DIR.is_dir() else PACKAGED_DATA_DIR
+)
+DEFAULT_OUTPUT_DIR = Path.cwd() / "runs" / "latest"
+
+
+def _data_resource(filename: str) -> ResourcePath:
+    source_path = SOURCE_DATA_DIR / filename
+    if source_path.is_file():
+        return source_path
+    return PACKAGED_DATA_DIR.joinpath(filename)
+
+
+SCENARIOS_PATH = _data_resource("scenarios.jsonl")
+PROMPT_CONDITIONS_PATH = _data_resource("prompt_conditions.json")
+DEFAULT_CONFIG_PATH = _data_resource("config.json")
 
 # In-memory default. Always overridden by ``data/config.json`` at
 # startup; kept here so tests that pass a custom config dict stay
@@ -105,11 +122,15 @@ CONFIG: dict[str, Any] = {
 }
 
 
-def load_runtime_config(path: Path | None = None) -> dict[str, Any]:
+def _resource_is_file(path: ResourcePath) -> bool:
+    return path.is_file()
+
+
+def load_runtime_config(path: ResourcePath | None = None) -> dict[str, Any]:
     """Load the JSON config file, falling back to the in-memory CONFIG."""
     if path is None:
         path = DEFAULT_CONFIG_PATH
-    if not path.exists():
+    if not _resource_is_file(path):
         return dict(CONFIG)
     raw = json.loads(path.read_text(encoding="utf-8"))
     merged = dict(CONFIG)
@@ -183,7 +204,9 @@ class Scenario:
     gold: AnswerSet = field(default_factory=AnswerSet)
 
 
-def load_scenarios(path: Path = SCENARIOS_PATH, subset: str | None = None) -> list[Scenario]:
+def load_scenarios(
+    path: ResourcePath = SCENARIOS_PATH, subset: str | None = None
+) -> list[Scenario]:
     """Load scenarios from ``scenarios.jsonl``, optionally filtered by subset.
 
     Each line is one JSON object. When ``subset`` is non-None, only
@@ -230,10 +253,10 @@ def load_scenarios(path: Path = SCENARIOS_PATH, subset: str | None = None) -> li
     return scenarios
 
 
-def _sha256_of_file(path: Path) -> str | None:
+def _sha256_of_file(path: ResourcePath) -> str | None:
     try:
         data = path.read_bytes()
-    except OSError:
+    except (OSError, FileNotFoundError):
         return None
     return hashlib.sha256(data).hexdigest()
 
@@ -289,7 +312,7 @@ def _build_manifest(
     """Construct the reproducibility manifest dict."""
     warnings: list[str] = []
 
-    def _sha_or_warn(path: Path, key: str) -> str | None:
+    def _sha_or_warn(path: ResourcePath, key: str) -> str | None:
         value = _sha256_of_file(path)
         if value is None:
             warnings.append(f"{key} could not be hashed from {path}")

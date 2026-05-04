@@ -9,6 +9,7 @@ plus policy neutrality.
 from __future__ import annotations
 
 import json
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -938,3 +939,26 @@ def test_public_docs_use_correct_framing() -> None:
         lowered = _read(path).lower()
         for phrase in required:
             assert phrase in lowered, f"{path} is missing required phrase {phrase!r}"
+
+
+# ---------------------------------------------------------------------------
+# Packaged runtime data (wheel-install path)
+# ---------------------------------------------------------------------------
+
+
+def test_runtime_data_is_available_as_package_resources() -> None:
+    """The runtime JSON/JSONL files must ship inside the installed package.
+
+    A wheel install lacks the source ``data/`` tree at the repo root, so
+    the runner falls back to ``importlib.resources``. This test asserts
+    that fallback is wired correctly and that the packaged copies match
+    the source-of-truth files byte-for-byte.
+    """
+    resource_root = files("wearable_assistant_context_bench").joinpath("data")
+    for name in ("config.json", "prompt_conditions.json", "scenarios.jsonl"):
+        packaged = resource_root.joinpath(name)
+        source = REPO_ROOT / "data" / name
+        assert packaged.is_file(), f"missing packaged runtime data: {name}"
+        assert packaged.read_text(encoding="utf-8") == source.read_text(
+            encoding="utf-8"
+        )

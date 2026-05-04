@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 
@@ -30,7 +31,7 @@ class PromptCondition:
     token_count: int
 
 
-def load_prompt_conditions(path: Path) -> list[PromptCondition]:
+def load_prompt_conditions(path: Path | Traversable) -> list[PromptCondition]:
     """Load prompt conditions from a JSON file."""
     with path.open("r", encoding="utf-8") as f:
         raw = json.load(f)

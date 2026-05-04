@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -30,3 +30,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
       - run: uv run pytest --cov=wearable_assistant_context_bench --cov-report=term-missing
+
+  wheel-smoke:
+    # Build the wheel, install it into a fresh venv that has no source
+    # tree, and run the console script. Catches packaging regressions
+    # (missing runtime data, broken entry point) that pytest alone misses.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv build
+      - run: uv venv /tmp/wac-wheel-smoke
+      - run: uv pip install --python /tmp/wac-wheel-smoke/bin/python dist/wearable_assistant_context_bench-*.whl
+      - run: /tmp/wac-wheel-smoke/bin/wac-bench --help
