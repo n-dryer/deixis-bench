@@ -94,9 +94,17 @@ OBJECT_NAME_BLOCKLIST = {
     # Sports / fitness
     "barbell", "dumbbell", "kettlebell", "yoga mat", "jump rope",
     "tennis racket", "racquet", "bat", "club", "ski", "skis",
+    "foam roller", "resistance band",
     # Electronics / digital (some only)
     "laptop", "phone", "smartphone", "tablet", "monitor",
     "keyboard", "mouse",
+    # Office
+    "stapler", "hole punch", "three-hole punch", "paper cutter",
+    "letter opener",
+    # Measurement / inspection (workshop-adjacent)
+    "caliper", "vernier caliper", "digital caliper", "thread gauge",
+    "pitch gauge", "feeler gauge", "micrometer", "torque wrench",
+    "tire gauge", "multimeter",
 }
 
 
