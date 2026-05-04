@@ -72,13 +72,39 @@ Three difficulty tiers:
 - medium: moderate — clarify or distractor or moderate prior/current vocab overlap.
 - hard: high — abstain target, offscreen referent, high prior/current vocab overlap, or subtle scene contrast.
 
-Reason briefly. Then emit a single JSON object on the final line with this exact shape:
-{"change_type": "<one of the eight>", "difficulty_tier": "<easy|medium|hard>", "rationale": "<one-sentence justification>"}
+OUTPUT FORMAT — emit ONLY a single JSON object, no preamble, no prose, no markdown fences. Do not write anything before or after the object. The rationale belongs inside the JSON.
 
-Output no text after the JSON object."""
+Required shape:
+{"change_type": "<one of the eight category names>", "difficulty_tier": "<easy|medium|hard>", "rationale": "<one-sentence justification>"}"""
 
 
-_JSON_TAIL = re.compile(r"\{[^{}]*\}\s*$", re.MULTILINE | re.DOTALL)
+_FENCE_RE = re.compile(r"```(?:json)?\s*|\s*```", re.IGNORECASE)
+
+
+def _extract_json_object(text: str) -> str | None:
+    """Pull the last balanced JSON object out of a possibly-fenced response.
+
+    Handles three real-world judge response shapes seen in this run:
+    Anthropic's bare-JSON-on-final-line, Gemini's ```json fenced block,
+    and Gemini's prose-then-JSON. Returns the JSON substring or None.
+    """
+    # Strip markdown code fences first; they break naive brace-counting.
+    cleaned = _FENCE_RE.sub("", text or "")
+    # Walk from the end backward, counting braces, to isolate the
+    # last top-level object. Avoids over-matching nested rationale strings.
+    depth = 0
+    end = -1
+    for i in range(len(cleaned) - 1, -1, -1):
+        c = cleaned[i]
+        if c == "}":
+            if depth == 0:
+                end = i
+            depth += 1
+        elif c == "{":
+            depth -= 1
+            if depth == 0 and end != -1:
+                return cleaned[i : end + 1]
+    return None
 
 
 def _build_judge_user_prompt(scenario: dict) -> str:
@@ -100,11 +126,11 @@ def _build_judge_user_prompt(scenario: dict) -> str:
 
 def _parse_judge_response(raw: str) -> dict[str, str]:
     """Pull the trailing JSON object out of the judge response."""
-    match = _JSON_TAIL.search(raw)
-    if not match:
+    chunk = _extract_json_object(raw or "")
+    if not chunk:
         return {"change_type": "", "difficulty_tier": "", "rationale": "PARSE_ERROR"}
     try:
-        obj = json.loads(match.group(0))
+        obj = json.loads(chunk)
     except json.JSONDecodeError:
         return {"change_type": "", "difficulty_tier": "", "rationale": "PARSE_ERROR"}
     return {
@@ -114,11 +140,20 @@ def _parse_judge_response(raw: str) -> dict[str, str]:
     }
 
 
-def _make_judge_adapter() -> Any:
-    """Lazy import so the rule-based pass works even without API creds."""
+def _make_judge_adapter(model_id: str) -> Any:
+    """Lazy import so the rule-based pass works even without API creds.
+
+    Family is inferred from the model id prefix so users can pass
+    `gemini/...`, `openai/...`, or `openrouter/anthropic/...` and have
+    LiteLLM route accordingly. Bumps max_tokens above the runtime
+    judge's default — Gemini 2.5 Flash in particular needs headroom or
+    the JSON gets truncated mid-rationale.
+    """
     from wearable_assistant_context_bench.llm_judge import LiteLLMJudgeAdapter
 
-    return LiteLLMJudgeAdapter(family="claude")
+    prefix = model_id.split("/", 1)[0].lower()
+    family = {"gemini": "gemini", "openai": "openai"}.get(prefix, "claude")
+    return LiteLLMJudgeAdapter(family=family, max_tokens=2048)
 
 
 def _call_judge(adapter: Any, scenario: dict, model_id: str) -> dict[str, str]:
@@ -286,7 +321,7 @@ def main() -> int:
             )
         else:
             _logger.info("Running LLM-judge spot-check on %d disagreements...", n_dis)
-            adapter = _make_judge_adapter()
+            adapter = _make_judge_adapter(args.judge_model)
             scenario_by_id = {s["scenario_id"]: s for s in scenarios}
             row_by_id = {r["scenario_id"]: r for r in rows}
             for i, row in enumerate(disagreements, 1):
