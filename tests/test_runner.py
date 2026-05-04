@@ -773,11 +773,11 @@ def test_runner_passes_ground_truth_to_judge() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Interventions / prompt conditions (was test_interventions.py)
+# Prompt conditions (was test_interventions.py)
 # ---------------------------------------------------------------------------
 
 
-PROJECT_INTERVENTIONS = REPO_ROOT / "data" / "prompt_conditions.json"
+PROJECT_PROMPT_CONDITIONS = REPO_ROOT / "data" / "prompt_conditions.json"
 
 
 EXPECTED_BASELINE = "You are an assistant helping a user with an ongoing project."
@@ -785,8 +785,8 @@ EXPECTED_CONDITION_A_FRAGMENT = "visual context"
 EXPECTED_CONDITION_B_FRAGMENT = "RELEVANT CONTEXT"
 
 
-def test_load_prompt_conditions_from_valid_fixture(interventions_sample_path: Path) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+def test_load_prompt_conditions_from_valid_fixture(prompt_conditions_sample_path: Path) -> None:
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     assert len(conditions) == 3
     names = [c.name for c in conditions]
     assert names == ["baseline", "condition_a", "condition_b"]
@@ -796,11 +796,11 @@ def test_load_prompt_conditions_from_valid_fixture(interventions_sample_path: Pa
 
 
 def test_prompt_condition_aliases_match_existing_loader(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    prompt_conditions = load_prompt_conditions(interventions_sample_path)
-    intervention_conditions = load_prompt_conditions(interventions_sample_path)
-    assert prompt_conditions == intervention_conditions
+    prompt_conditions = load_prompt_conditions(prompt_conditions_sample_path)
+    prompt_conditions_again = load_prompt_conditions(prompt_conditions_sample_path)
+    assert prompt_conditions == prompt_conditions_again
     assert all(isinstance(c, PromptCondition) for c in prompt_conditions)
 
 
@@ -812,33 +812,33 @@ def test_load_prompt_conditions_raises_on_malformed_json(tmp_path: Path) -> None
 
 
 def test_get_prompt_condition_by_name_returns_condition_a(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     condition = get_prompt_condition_by_name(conditions, "condition_a")
     assert condition.name == "condition_a"
     assert "visual context" in condition.system_prompt.lower()
 
 
 def test_get_prompt_condition_by_name_returns_condition_b(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     condition = get_prompt_condition_by_name(conditions, "condition_b")
     assert condition.name == "condition_b"
     assert "relevant context" in condition.system_prompt.lower()
 
 
 def test_get_prompt_condition_by_name_raises_on_unknown(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     with pytest.raises(ValueError):
         get_prompt_condition_by_name(conditions, "does_not_exist")
 
 
-def test_project_interventions_json_loads_three_conditions() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_project_prompt_conditions_json_loads_three_conditions() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     assert [c.name for c in conditions] == [
         "baseline",
         "condition_a",
@@ -846,16 +846,16 @@ def test_project_interventions_json_loads_three_conditions() -> None:
     ]
 
 
-def test_project_interventions_baseline_matches_expected_text() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_project_prompt_conditions_baseline_matches_expected_text() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     by_name = {c.name: c.system_prompt for c in conditions}
     assert by_name["baseline"] == EXPECTED_BASELINE
     assert EXPECTED_CONDITION_A_FRAGMENT in by_name["condition_a"].lower()
     assert EXPECTED_CONDITION_B_FRAGMENT in by_name["condition_b"]
 
 
-def test_interventions_are_policy_neutral() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_prompt_conditions_are_policy_neutral() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     forbidden_snippets = (
         "always answer based on the user's current state",
         "only that current state as your ground truth",

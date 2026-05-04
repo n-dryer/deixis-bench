@@ -40,7 +40,8 @@ def wilson_interval(
 ) -> tuple[float, float, float] | None:
     """Wilson score interval for a binomial proportion as ``(rate, lo, hi)``.
 
-    Thin tuple-returning wrapper over :func:`core.statistics.wilson_ci`
+    Thin tuple-returning wrapper over
+    :func:`wearable_assistant_context_bench.statistics.wilson_ci`
     for callers in this module that pre-date the dataclass API. New
     code should call ``wilson_ci`` directly.
 
@@ -343,21 +344,21 @@ def recall_by_shift_type(
 ) -> dict[str, tuple[float, float, float] | None]:
     """Mean recall sliced by ``shift_type``.
 
-    For each cue type, treats every trial as a single binomial outcome
-    (collapses across class). The Wilson CI for the per-cue pass rate
-    is reported. Returns ``None`` for a cue type with zero trials in
-    the requested condition.
+    For each shift type, treats every trial as a single binomial
+    outcome (collapses across class). The Wilson CI for the
+    per-shift-type pass rate is reported. Returns ``None`` for a
+    shift type with zero trials in the requested condition.
     """
-    by_cue: dict[str, list[dict]] = defaultdict(list)
+    by_shift: dict[str, list[dict]] = defaultdict(list)
     for trial in results:
         if trial["condition"] != condition:
             continue
-        cue = trial.get("shift_type") or "unknown"
-        by_cue[cue].append(trial)
+        shift = trial.get("shift_type") or "unknown"
+        by_shift[shift].append(trial)
     out: dict[str, tuple[float, float, float] | None] = {}
-    for cue, trials in by_cue.items():
+    for shift, trials in by_shift.items():
         passed = sum(1 for t in trials if bool(t["turn_2_passed"]))
-        out[cue] = wilson_interval(passed, len(trials))
+        out[shift] = wilson_interval(passed, len(trials))
     return out
 
 

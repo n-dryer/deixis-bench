@@ -99,7 +99,7 @@ class JudgeAdapterBase(ABC):
 class GeminiJudgeAdapter(JudgeAdapterBase):
     """Gemini-backed judge adapter using the native google-genai SDK.
 
-    Wraps `core.gemini_adapter.GeminiAdapter` for single-shot
+    Wraps `wearable_assistant_context_bench.gemini_adapter.GeminiAdapter` for single-shot
     system+user judge calls. Used when the resolved judge family is
     `gemini` and the model id is a bare Gemini name (no provider
     prefix); provider-qualified ids like

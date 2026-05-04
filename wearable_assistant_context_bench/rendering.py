@@ -26,7 +26,7 @@ the metric helpers in
 9. **Inter-judge agreement (cross-LLM).**
 10. **Scenario-by-condition matrix.**
 11. **Reproducibility manifest.** A JSON block with the scenario /
-    interventions / judge-prompt SHAs, model strings, trials,
+    prompt-conditions / judge-prompt SHAs, model strings, trials,
     temperature, and the default comparison condition.
 """
 
@@ -109,7 +109,7 @@ def render_findings_markdown(
         for condition in conditions
     }
     per_subset_recall_ci = recall_by_subset(results, ranking_condition)
-    per_cue_recall_ci = recall_by_shift_type(results, ranking_condition)
+    per_shift_type_recall_ci = recall_by_shift_type(results, ranking_condition)
     pair_consistency = contrast_pair_consistency(results, ranking_condition)
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
@@ -138,7 +138,7 @@ def render_findings_markdown(
         "",
         "## Per shift-type recall",
         "",
-        _render_per_cue_table(per_cue_recall_ci),
+        _render_per_shift_type_table(per_shift_type_recall_ci),
         "",
         "## Contrast pair consistency",
         "",
@@ -255,10 +255,10 @@ def _render_per_subset_table(
     return "\n".join(rows)
 
 
-def _render_per_cue_table(
-    per_cue: dict[str, tuple[float, float, float] | None],
+def _render_per_shift_type_table(
+    per_shift_type: dict[str, tuple[float, float, float] | None],
 ) -> str:
-    if not per_cue:
+    if not per_shift_type:
         return "_No trials recorded._"
 
     def _ci(triple: tuple[float, float, float] | None) -> str:
@@ -268,8 +268,8 @@ def _render_per_cue_table(
         return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
 
     rows = ["| Shift type | Pass rate (95% CI) |", "| --- | --- |"]
-    for cue in sorted(per_cue.keys()):
-        rows.append(f"| `{cue}` | {_ci(per_cue[cue])} |")
+    for shift_type in sorted(per_shift_type.keys()):
+        rows.append(f"| `{shift_type}` | {_ci(per_shift_type[shift_type])} |")
     return "\n".join(rows)
 
 

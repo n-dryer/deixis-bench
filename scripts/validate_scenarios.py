@@ -408,8 +408,8 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
 
     # Distribution checks (main subset only).
     if enforce_distribution:
-        cue_counts = Counter(sc.get("shift_type") for sc in scenarios)
-        expected_cue_counts = {
+        shift_type_counts = Counter(sc.get("shift_type") for sc in scenarios)
+        expected_shift_type_counts = {
             "object_in_hand": 12,
             "object_state": 8,
             "sequential_task": 6,
@@ -419,13 +419,13 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
             "screen_content": 4,
             "cross_session_reference": 4,
         }
-        for cue, expected_count in expected_cue_counts.items():
-            if cue_counts[cue] != expected_count:
+        for shift_type, expected_count in expected_shift_type_counts.items():
+            if shift_type_counts[shift_type] != expected_count:
                 fails.append(
                     {
                         "scenario_id": "<main>",
                         "check": "schema",
-                        "detail": f"shift_type {cue} count {cue_counts[cue]} does not match expected {expected_count}",
+                        "detail": f"shift_type {shift_type} count {shift_type_counts[shift_type]} does not match expected {expected_count}",
                     }
                 )
 

@@ -19,8 +19,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-# Inline interventions sample used by intervention-loading tests.
-_INTERVENTIONS_SAMPLE = [
+# Inline prompt-conditions sample used by prompt-condition-loading tests.
+_PROMPT_CONDITIONS_SAMPLE = [
     {
         "name": "baseline",
         "description": (
@@ -77,16 +77,16 @@ _INTERVENTIONS_SAMPLE = [
 
 
 @pytest.fixture
-def interventions_sample_path(tmp_path: Path) -> Path:
-    """Write the inline interventions sample to tmp_path and return the path.
+def prompt_conditions_sample_path(tmp_path: Path) -> Path:
+    """Write the inline prompt-conditions sample to tmp_path and return the path.
 
-    Replaces the on-disk ``tests/fixtures/interventions_sample.json`` from
-    earlier revisions; consolidating it into conftest removes a
+    Replaces the on-disk ``tests/fixtures/prompt_conditions_sample.json``
+    from earlier revisions; consolidating it into conftest removes a
     one-file subdir.
     """
-    target = tmp_path / "interventions_sample.json"
+    target = tmp_path / "prompt_conditions_sample.json"
     target.write_text(
-        json.dumps(_INTERVENTIONS_SAMPLE, indent=2),
+        json.dumps(_PROMPT_CONDITIONS_SAMPLE, indent=2),
         encoding="utf-8",
     )
     return target

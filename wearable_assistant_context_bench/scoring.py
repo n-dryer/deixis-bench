@@ -2,7 +2,8 @@
 
 These functions implement the deterministic half of the scoring flow.
 Callers combine the returned signals with a judge verdict
-(`core.llm_judge`) to reach a final pass/fail decision.
+(`wearable_assistant_context_bench.llm_judge`) to reach a final
+pass/fail decision.
 
 The signal `has_prior` reflects that the response followed the earlier
 context. The contrastive-pattern suppressor (see `_CONTRASTIVE_RE`)

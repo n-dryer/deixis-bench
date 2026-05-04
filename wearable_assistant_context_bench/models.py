@@ -4,8 +4,10 @@ This module holds the small dataclasses that the runner and the
 adapters share. The actual API integrations live in the
 provider-specific adapter modules:
 
-- ``core.gemini_adapter`` for the native Gemini SDK transport
-- ``core.litellm_adapter`` for the unified LiteLLM transport (used for
+- ``wearable_assistant_context_bench.gemini_adapter`` for the native
+  Gemini SDK transport
+- ``wearable_assistant_context_bench.litellm_adapter`` for the unified
+  LiteLLM transport (used for
   Claude, OpenAI, OpenRouter-routed models, and any other provider
   qualified by a slash in the model id)
 

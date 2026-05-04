@@ -563,7 +563,7 @@ def test_render_findings_markdown_emits_complete_manifest() -> None:
     manifest = {
         "benchmark_version": "0.1.0",
         "scenarios_sha256": "sha-scenarios",
-        "prompt_conditions_sha256": "sha-interventions",
+        "prompt_conditions_sha256": "sha-prompt-conditions",
         "candidate_model": "claude-sonnet-4-6",
         "judge_model": "gemini-2.5-flash",
         "judge_family": "gemini",
