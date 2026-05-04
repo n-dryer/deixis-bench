@@ -704,5 +704,89 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "absent_referent batch 6a"
+  },
+  "sc-129": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2 (post-fix: dropped power adapter from prior_answers — were leaking in image)"
+  },
+  "sc-130": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2 (post-fix: dropped pharmacy bottle, child-resistant cap from prior_answers — were leaking in image)"
+  },
+  "sc-131": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2"
+  },
+  "sc-132": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2"
+  },
+  "sc-133": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2 (post-fix: dropped envelope from prior_answers — were leaking in image)"
+  },
+  "sc-134": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2 (post-fix: dropped six-string acoustic, rounded wooden soundbox from prior_answers — were leaking in image)"
+  },
+  "sc-135": {
+    "batch": "6b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2"
   }
 }
