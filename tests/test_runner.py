@@ -353,12 +353,17 @@ def test_config_overrides_from_args_full() -> None:
 
 def test_adv_prefixed_scenarios_load_in_unified_bank(tmp_path: Path) -> None:
     """After contrast retirement, ``adv-*`` ids live in the unified bank
-    alongside ``sc-*`` ids. There's no longer a subset filter."""
+    alongside ``sc-*`` ids. There's no longer a subset filter.
+
+    Bank size is growth-tolerant: the bank is currently mid-expansion
+    (target 166 scenarios per the coverage plan). Pin the floor (the
+    original 70 still load) rather than an exact count.
+    """
     scenarios = run_module.load_scenarios()
     ids = {s.scenario_id for s in scenarios}
     assert any(sid.startswith("adv-") for sid in ids)
     assert any(sid.startswith("sc-") for sid in ids)
-    assert len(ids) == 70
+    assert len(ids) >= 70
 
 
 def test_manifest_records_schema_fields(tmp_path: Path) -> None:

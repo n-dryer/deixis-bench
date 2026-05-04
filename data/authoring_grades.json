@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "schema_version": 1,
+    "description": "Per-scenario grades from the §18b authoring quality rubric. Populated by the per-batch validation sub-agent. Originals (batch 0) are ungraded.",
+    "scale": "1-5 for numeric dimensions; 'pass' / 'fail' for boolean dimensions; free text for domain_coverage_note",
+    "min_passing_numeric": 3,
+    "missing_info_dimension_applies_to": "abstain target only",
+    "ambiguity_dimension_applies_to": "clarify target only",
+    "scene_plausibility": "conservative: minimum across T1 and T2",
+    "deictic_naturalness": "conservative: minimum across T1 and T2"
+  },
+  "sc-71": {
+    "batch": 1,
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 4,
+    "deictic_naturalness": 4,
+    "distinctness": 5,
+    "domain_coverage_note": "first prior+object_in_hand row in fitness; healthy fill"
+  },
+  "sc-72": {
+    "batch": 1,
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 5,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 4,
+    "distinctness": 5,
+    "domain_coverage_note": "first object_in_hand row in office; well-constructed prior-vs-current ambiguity"
+  },
+  "sc-73": {
+    "batch": 1,
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 4,
+    "distinctness": 5,
+    "domain_coverage_note": "first abstain+object_in_hand row in workshop; missing-spec design is well-grounded"
+  }
+}
