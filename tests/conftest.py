@@ -19,17 +19,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-# Inline interventions sample used by intervention-loading tests.
-_INTERVENTIONS_SAMPLE = [
+# Inline prompt-conditions sample used by prompt-condition-loading tests.
+_PROMPT_CONDITIONS_SAMPLE = [
     {
         "name": "baseline",
         "description": (
-            "Minimal system prompt. Default comparison condition for "
-            "the primary benchmark score."
+            "Minimal system prompt. Default comparison condition for the primary benchmark score."
         ),
-        "system_prompt": (
-            "You are an assistant helping a user with an ongoing project."
-        ),
+        "system_prompt": ("You are an assistant helping a user with an ongoing project."),
         "token_count": 13,
     },
     {
@@ -80,16 +77,16 @@ _INTERVENTIONS_SAMPLE = [
 
 
 @pytest.fixture
-def interventions_sample_path(tmp_path: Path) -> Path:
-    """Write the inline interventions sample to tmp_path and return the path.
+def prompt_conditions_sample_path(tmp_path: Path) -> Path:
+    """Write the inline prompt-conditions sample to tmp_path and return the path.
 
-    Replaces the on-disk ``tests/fixtures/interventions_sample.json`` from
-    earlier revisions; consolidating it into conftest removes a
+    Replaces the on-disk ``tests/fixtures/prompt_conditions_sample.json``
+    from earlier revisions; consolidating it into conftest removes a
     one-file subdir.
     """
-    target = tmp_path / "interventions_sample.json"
+    target = tmp_path / "prompt_conditions_sample.json"
     target.write_text(
-        json.dumps(_INTERVENTIONS_SAMPLE, indent=2),
+        json.dumps(_PROMPT_CONDITIONS_SAMPLE, indent=2),
         encoding="utf-8",
     )
     return target
@@ -249,15 +246,15 @@ def sample_trial_factory():
         turn_2_code_signals: dict | None = None,
         turn_3_repair_attempted: bool = False,
         turn_3_repair_passed: bool | None = None,
-        pack: str = "bank",
+        pack: str = "main",
         pair_id: str | None = None,
-        cue_type: str = "object_in_hand",
+        shift_type: str = "object_in_hand",
     ) -> dict:
         return {
             "scenario_id": scenario_id,
             "subset": pack,
             "pair_id": pair_id,
-            "change_type": cue_type,
+            "shift_type": shift_type,
             "condition": condition,
             "trial": trial,
             "target_context": target_context,

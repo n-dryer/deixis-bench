@@ -1,9 +1,10 @@
 """Math validation: per-trial scoring + report aggregation.
 
 Covers ``wearable_assistant_context_bench.scoring`` (deterministic
-per-trial signals) and ``wearable_assistant_context_bench.report``
-(aggregation, recall metrics, manifest rendering, inter-judge
-agreement).
+per-trial signals) and
+``wearable_assistant_context_bench.aggregation`` /
+``wearable_assistant_context_bench.rendering`` (aggregation, recall
+metrics, manifest rendering, inter-judge agreement).
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import re
 
 import pytest
 
-from wearable_assistant_context_bench.report import (
+from wearable_assistant_context_bench.aggregation import (
     AUXILIARY_POLICY_NOTE,
     BENCHMARK_LABEL,
     DEFAULT_RANKING_CONDITION,
@@ -32,13 +33,13 @@ from wearable_assistant_context_bench.report import (
     mean_recall_with_bootstrap_ci_under_condition,
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
-    recall_by_change_type,
+    recall_by_shift_type,
     recall_by_subset,
-    render_findings_markdown,
     scenario_by_condition_matrix,
     simulated_repair_rate_by_condition,
     wilson_interval,
 )
+from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import (
     detect_refusal,
     fuzzy_match,
@@ -155,9 +156,7 @@ def test_score_response_no_trigger_verb_leaves_has_prior_true() -> None:
 
 def test_score_response_has_clarify_signal() -> None:
     result = score_response(
-        response=(
-            "Do you mean the scene you just described, or the one from earlier?"
-        ),
+        response=("Do you mean the scene you just described, or the one from earlier?"),
         current_answers=[],
         prior_answers=[],
         clarify_indicators=["Do you mean"],
@@ -236,15 +235,15 @@ def _trial(
     turn_2_code_signals: dict | None = None,
     turn_3_repair_attempted: bool = False,
     turn_3_repair_passed: bool | None = None,
-    subset: str = "bank",
+    subset: str = "main",
     pair_id: str | None = None,
-    change_type: str = "object_in_hand",
+    shift_type: str = "object_in_hand",
 ) -> dict:
     return {
         "scenario_id": scenario_id,
         "subset": subset,
         "pair_id": pair_id,
-        "change_type": change_type,
+        "shift_type": shift_type,
         "condition": condition,
         "trial": trial,
         "target_context": target_context,
@@ -262,7 +261,7 @@ def _trial(
 
 def _fixture_results() -> list[dict]:
     """Mini fixture: one ``prior`` scenario (sc-03) and three ``current``
-    scenarios (sc-01, sc-02, sc-04). Two trials per cell. All bank pack."""
+    scenarios (sc-01, sc-02, sc-04). Two trials per cell. All main subset."""
     results: list[dict] = []
     prior_cells = [
         ("baseline", [False, False], [True, False]),
@@ -390,22 +389,22 @@ def test_mean_recall_penalizes_clarify_abstain_as_wrong() -> None:
     assert mean_recall_under_condition(results, "baseline") == pytest.approx(0.5)
 
 
-def test_recall_by_subset_splits_bank_and_contrast() -> None:
+def test_recall_by_subset_splits_main_and_contrast() -> None:
     results = _fixture_results()
     # Mark a few trials as contrast pack.
     for i in range(0, 4):
         results[i]["subset"] = "contrast"
     by_pack = recall_by_subset(results, "baseline")
-    assert "bank" in by_pack
+    assert "main" in by_pack
     assert "contrast" in by_pack
 
 
-def test_recall_by_change_type_buckets_correctly() -> None:
+def test_recall_by_shift_type_buckets_correctly() -> None:
     results = _fixture_results()
     # Tag two trials with a different cue type so the dict has 2 keys.
     for i in range(2):
-        results[i]["change_type"] = "object_state"
-    out = recall_by_change_type(results, "baseline")
+        results[i]["shift_type"] = "object_state"
+    out = recall_by_shift_type(results, "baseline")
     assert "object_in_hand" in out
     assert "object_state" in out
 
@@ -532,10 +531,9 @@ def test_render_findings_markdown_shape() -> None:
             "sc-04": "current",
         },
         manifest={
-            "benchmark_version": "0.1",
+            "benchmark_version": "0.1.0",
             "scenarios_sha256": "abc",
             "prompt_conditions_sha256": "ghi",
-            "judge_prompt_version": "0.1.0",
             "candidate_model": "claude-sonnet-4-6",
             "judge_model": "gemini-2.5-flash",
             "judge_family": "gemini",
@@ -550,7 +548,7 @@ def test_render_findings_markdown_shape() -> None:
     assert "Benchmark summary" in output
     assert "Per-class pass rate" in output
     assert "Per-subset recall" in output
-    assert "Per change-type recall" in output
+    assert "Per shift-type recall" in output
     assert "Contrast pair consistency" in output
     assert "Hedging behavior" in output
     assert "Code-judge disagreement" in output
@@ -563,10 +561,9 @@ def test_render_findings_markdown_shape() -> None:
 
 def test_render_findings_markdown_emits_complete_manifest() -> None:
     manifest = {
-        "benchmark_version": "0.1",
+        "benchmark_version": "0.1.0",
         "scenarios_sha256": "sha-scenarios",
-        "prompt_conditions_sha256": "sha-interventions",
-        "judge_prompt_version": "0.1.0",
+        "prompt_conditions_sha256": "sha-prompt-conditions",
         "candidate_model": "claude-sonnet-4-6",
         "judge_model": "gemini-2.5-flash",
         "judge_family": "gemini",
@@ -592,7 +589,7 @@ def test_render_findings_markdown_emits_complete_manifest() -> None:
 def test_render_findings_markdown_manifest_fills_missing_keys() -> None:
     output = render_findings_markdown(
         _fixture_results(),
-        manifest={"benchmark_version": "0.1"},
+        manifest={"benchmark_version": "0.1.0"},
     )
     match = re.search(r"```json\n(.*?)\n```", output, re.DOTALL)
     assert match is not None
@@ -690,9 +687,7 @@ def test_mean_recall_bootstrap_ci_brackets_normal_ci() -> None:
                 turn_2_passed=(i < 10),
             )
         )
-    triple = mean_recall_with_bootstrap_ci_under_condition(
-        results, "baseline", n_iter=2000
-    )
+    triple = mean_recall_with_bootstrap_ci_under_condition(results, "baseline", n_iter=2000)
     assert triple is not None
     point, lo, hi = triple
     # Mean of recalls = (1.0 + 0.5) / 2 = 0.75
@@ -752,9 +747,7 @@ def test_inter_judge_disagreement_by_scenario_counts_only_paired_trials() -> Non
     results = _fixture_results()
     target_idx = 0
     results[target_idx]["turn_2_ranking_judge_label"] = (
-        "prior"
-        if results[target_idx]["turn_2_judge_label"] != "prior"
-        else "current"
+        "prior" if results[target_idx]["turn_2_judge_label"] != "prior" else "current"
     )
     counts = inter_judge_disagreement_by_scenario(results)
     assert counts.get(results[target_idx]["scenario_id"]) == 1

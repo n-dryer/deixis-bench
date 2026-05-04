@@ -109,7 +109,7 @@ def _make_scenario(
     *,
     scenario_id: str = "sc-test",
     target_context: str = "current",
-    change_type: str = "object_in_hand",
+    shift_type: str = "object_in_hand",
     activity_domain: str = "workshop",
     referent_complexity: str = "single_referent",
     difficulty_tier: str = "easy",
@@ -119,14 +119,14 @@ def _make_scenario(
     turn_2_user: str = "What about now?",
     turn_3_repair_prompt: str = "I mean the object I'm holding now.",
     context_image: str | None = None,
-    subset: str = "bank",
+    subset: str = "main",
     pair_id: str | None = None,
     gold: AnswerSet | None = None,
 ) -> Scenario:
     return Scenario(
         scenario_id=scenario_id,
         target_context=target_context,
-        change_type=change_type,
+        shift_type=shift_type,
         activity_domain=activity_domain,
         referent_complexity=referent_complexity,
         difficulty_tier=difficulty_tier,
@@ -157,7 +157,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
         config={"output_dir": str(output_dir)},
     )
 
-    scenario_count = len(run_module.load_scenarios(subset="bank"))
+    scenario_count = len(run_module.load_scenarios(subset="main"))
     condition_count = len(run_module.load_prompt_conditions(run_module.PROMPT_CONDITIONS_PATH))
     expected_trials = scenario_count * condition_count * run_module.CONFIG["trials_per_cell"]
     assert len(results) == expected_trials
@@ -176,7 +176,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "condition",
             "trial",
             "target_context",
-            "change_type",
+            "shift_type",
             "turn_1_user",
             "turn_1_image",
             "turn_1_response",
@@ -190,7 +190,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "turn_3_repair_passed",
         ):
             assert required in payload, f"missing {required} in transcript row"
-        assert payload["subset"] == "bank"
+        assert payload["subset"] == "main"
 
 
 def test_run_default_repair_disabled_records_no_repair_attempts(
@@ -364,7 +364,7 @@ def test_parse_args_accepts_pack_flag_contrast() -> None:
 
 
 def test_parse_args_rejects_legacy_pack_values() -> None:
-    """`adversarial` and `hard` were renamed/removed; only `bank` and
+    """`adversarial` and `hard` were renamed/removed; only `main` and
     `contrast` remain valid."""
     with pytest.raises(SystemExit):
         run_module._parse_args(["--subset", "adversarial"])
@@ -394,7 +394,7 @@ def test_contrast_pack_loads_with_distinct_ids(tmp_path: Path) -> None:
     assert payload["subset"] == "contrast"
 
 
-def test_manifest_records_schema_fields(tmp_path: Path) -> None:
+def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     adapter = _StubAdapter()
     judge = _StubJudge()
     output_dir = tmp_path / "manifest_run"
@@ -409,14 +409,18 @@ def test_manifest_records_schema_fields(tmp_path: Path) -> None:
     match = _re.search(r"```json\n(.*?)\n```", findings_body, _re.DOTALL)
     assert match is not None
     payload = json.loads(match.group(1))
-    assert payload["schema_revision"] == 1
     assert payload["camera_injection"] is True
     assert payload["enable_repair"] is False
-    assert payload["subset"] == "bank"
+    assert payload["subset"] == "main"
     assert "ranking_judge_model" in payload
     assert "ranking_judge_family" in payload
     assert payload["ranking_judge_model"] is None
     assert payload["ranking_judge_family"] is None
+    # Positive: benchmark_version is recorded at the top level.
+    assert payload["benchmark_version"] == "0.1.0"
+    # Negative regression guards: removed fields must not reappear.
+    assert "schema_revision" not in payload
+    assert "judge_prompt_version" not in payload
 
 
 class _StubRankingJudge(_StubJudge):
@@ -483,7 +487,7 @@ def test_resolve_repair_anchor_deictic_falls_back_when_absent() -> None:
     """absent_referent / cross_session_reference scenarios have no
     deictic anchor; the runner falls back to named."""
     scenario = _make_scenario(
-        change_type="absent_referent",
+        shift_type="absent_referent",
         target_context="prior",
         turn_3_repair_prompt="named only",
     )
@@ -500,8 +504,8 @@ def test_parse_args_accepts_repair_style_flag() -> None:
     assert overrides == {"repair_style": "deictic"}
 
 
-def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+def test_committed_main_subset_has_deictic_for_visible_current_scenarios() -> None:
+    scenarios = run_module.load_scenarios(subset="main")
     visible = {
         "object_in_hand",
         "object_in_view",
@@ -514,18 +518,18 @@ def test_committed_bank_has_deictic_for_visible_current_scenarios() -> None:
         s.scenario_id
         for s in scenarios
         if s.target_context == "current"
-        and s.change_type in visible
+        and s.shift_type in visible
         and not s.turn_3_repair_prompt_deictic
     ]
     assert not missing
 
 
-def test_committed_bank_omits_deictic_for_non_visible_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="bank")
+def test_committed_main_subset_omits_deictic_for_non_visible_scenarios() -> None:
+    scenarios = run_module.load_scenarios(subset="main")
     bad = [
         s.scenario_id
         for s in scenarios
-        if s.change_type in {"absent_referent", "cross_session_reference"}
+        if s.shift_type in {"absent_referent", "cross_session_reference"}
         and s.turn_3_repair_prompt_deictic
     ]
     assert not bad
@@ -555,7 +559,7 @@ def test_load_runtime_config_reads_json_file() -> None:
     cfg = run_module.load_runtime_config()
     assert cfg["trials_per_cell"] == 1
     assert cfg["enable_repair"] is False
-    assert cfg["subset"] == "bank"
+    assert cfg["subset"] == "main"
 
 
 # ---------------------------------------------------------------------------
@@ -769,11 +773,11 @@ def test_runner_passes_ground_truth_to_judge() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Interventions / prompt conditions (was test_interventions.py)
+# Prompt conditions (was test_interventions.py)
 # ---------------------------------------------------------------------------
 
 
-PROJECT_INTERVENTIONS = REPO_ROOT / "data" / "prompt_conditions.json"
+PROJECT_PROMPT_CONDITIONS = REPO_ROOT / "data" / "prompt_conditions.json"
 
 
 EXPECTED_BASELINE = "You are an assistant helping a user with an ongoing project."
@@ -781,8 +785,8 @@ EXPECTED_CONDITION_A_FRAGMENT = "visual context"
 EXPECTED_CONDITION_B_FRAGMENT = "RELEVANT CONTEXT"
 
 
-def test_load_prompt_conditions_from_valid_fixture(interventions_sample_path: Path) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+def test_load_prompt_conditions_from_valid_fixture(prompt_conditions_sample_path: Path) -> None:
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     assert len(conditions) == 3
     names = [c.name for c in conditions]
     assert names == ["baseline", "condition_a", "condition_b"]
@@ -792,11 +796,11 @@ def test_load_prompt_conditions_from_valid_fixture(interventions_sample_path: Pa
 
 
 def test_prompt_condition_aliases_match_existing_loader(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    prompt_conditions = load_prompt_conditions(interventions_sample_path)
-    intervention_conditions = load_prompt_conditions(interventions_sample_path)
-    assert prompt_conditions == intervention_conditions
+    prompt_conditions = load_prompt_conditions(prompt_conditions_sample_path)
+    prompt_conditions_again = load_prompt_conditions(prompt_conditions_sample_path)
+    assert prompt_conditions == prompt_conditions_again
     assert all(isinstance(c, PromptCondition) for c in prompt_conditions)
 
 
@@ -808,33 +812,33 @@ def test_load_prompt_conditions_raises_on_malformed_json(tmp_path: Path) -> None
 
 
 def test_get_prompt_condition_by_name_returns_condition_a(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     condition = get_prompt_condition_by_name(conditions, "condition_a")
     assert condition.name == "condition_a"
     assert "visual context" in condition.system_prompt.lower()
 
 
 def test_get_prompt_condition_by_name_returns_condition_b(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     condition = get_prompt_condition_by_name(conditions, "condition_b")
     assert condition.name == "condition_b"
     assert "relevant context" in condition.system_prompt.lower()
 
 
 def test_get_prompt_condition_by_name_raises_on_unknown(
-    interventions_sample_path: Path,
+    prompt_conditions_sample_path: Path,
 ) -> None:
-    conditions = load_prompt_conditions(interventions_sample_path)
+    conditions = load_prompt_conditions(prompt_conditions_sample_path)
     with pytest.raises(ValueError):
         get_prompt_condition_by_name(conditions, "does_not_exist")
 
 
-def test_project_interventions_json_loads_three_conditions() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_project_prompt_conditions_json_loads_three_conditions() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     assert [c.name for c in conditions] == [
         "baseline",
         "condition_a",
@@ -842,16 +846,16 @@ def test_project_interventions_json_loads_three_conditions() -> None:
     ]
 
 
-def test_project_interventions_baseline_matches_expected_text() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_project_prompt_conditions_baseline_matches_expected_text() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     by_name = {c.name: c.system_prompt for c in conditions}
     assert by_name["baseline"] == EXPECTED_BASELINE
     assert EXPECTED_CONDITION_A_FRAGMENT in by_name["condition_a"].lower()
     assert EXPECTED_CONDITION_B_FRAGMENT in by_name["condition_b"]
 
 
-def test_interventions_are_policy_neutral() -> None:
-    conditions = load_prompt_conditions(PROJECT_INTERVENTIONS)
+def test_prompt_conditions_are_policy_neutral() -> None:
+    conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     forbidden_snippets = (
         "always answer based on the user's current state",
         "only that current state as your ground truth",

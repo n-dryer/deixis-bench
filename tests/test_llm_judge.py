@@ -2,7 +2,7 @@
 no-leakage constraints on what the judge prompt may contain.
 
 The judge labels each Turn 2 response without seeing the scenario's
-``target_context`` label, the ``cue_type`` shift category, or the
+``target_context`` label, the ``shift_type`` shift category, or the
 authoring ``notes``. Those fields would tell the judge the answer it
 is being asked to produce. These tests verify the prompt-building
 helpers respect those constraints.
@@ -51,10 +51,7 @@ def test_judge_prompt_mentions_all_four_policies() -> None:
 
 
 def test_parse_verdict_extracts_current_policy() -> None:
-    raw = (
-        "reasoning...\n"
-        '{"selected_label": "current", "rationale": "reflects new scene."}'
-    )
+    raw = 'reasoning...\n{"selected_label": "current", "rationale": "reflects new scene."}'
     verdict = parse_verdict(raw)
     assert verdict.selected_label == "current"
     assert "reflects new scene" in verdict.rationale
@@ -75,10 +72,7 @@ def test_parse_verdict_rejects_unknown_policy() -> None:
 def test_parse_verdict_falls_back_to_abstain_when_no_json_or_label_line() -> None:
     verdict = parse_verdict("no JSON object here, just bare prose")
     assert verdict.selected_label == "abstain"
-    assert (
-        "no-verdict" in verdict.rationale.lower()
-        or "fallback" in verdict.rationale.lower()
-    )
+    assert "no-verdict" in verdict.rationale.lower() or "fallback" in verdict.rationale.lower()
 
 
 def test_parse_verdict_does_not_flip_on_contrastive_prose() -> None:
@@ -92,10 +86,7 @@ def test_parse_verdict_does_not_flip_on_contrastive_prose() -> None:
 
 
 def test_parse_verdict_recovers_from_explicit_label_line() -> None:
-    raw = (
-        "Reasoning: the response describes the new frame.\n"
-        "selected_label: current"
-    )
+    raw = "Reasoning: the response describes the new frame.\nselected_label: current"
     verdict = parse_verdict(raw)
     assert verdict.selected_label == "current"
     assert "recovered" in verdict.rationale.lower()
@@ -216,9 +207,7 @@ class _StubAdapter(JudgeAdapterBase):
 
 
 def test_judge_label_round_trips_through_stub_adapter() -> None:
-    stub = _StubAdapter(
-        '{"selected_label": "prior", "rationale": "answered from earlier clips"}'
-    )
+    stub = _StubAdapter('{"selected_label": "prior", "rationale": "answered from earlier clips"}')
     judge = LLMJudge(adapter=stub, model_id="stub-model")
     verdict = judge.label(
         response="I'll summarize the three clips from yesterday.",
@@ -265,9 +254,7 @@ def test_build_judge_accepts_explicit_model_id() -> None:
         ("gemini", "openrouter/google/gemini-2.5-flash"),
     ],
 )
-def test_build_judge_uses_litellm_for_provider_qualified_models(
-    family: str, model_id: str
-) -> None:
+def test_build_judge_uses_litellm_for_provider_qualified_models(family: str, model_id: str) -> None:
     judge = build_judge(family=family, model_id=model_id)
     assert judge.model_id == model_id
     assert isinstance(judge._adapter, LiteLLMJudgeAdapter)
@@ -320,13 +307,8 @@ def test_scenario_description_does_not_name_target_context(scenarios) -> None:
         rendered = _build_scenario_description(scenario).lower()
         for phrase in _label_naming_phrases(scenario.target_context):
             if phrase in rendered:
-                leaks.append(
-                    f"{scenario.scenario_id}: {phrase!r} found in scenario_description"
-                )
-    assert not leaks, (
-        "scenario_description names target_context for:\n  - "
-        + "\n  - ".join(leaks)
-    )
+                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in scenario_description")
+    assert not leaks, "scenario_description names target_context for:\n  - " + "\n  - ".join(leaks)
 
 
 def test_ground_truth_context_omits_target_cue_and_notes(scenarios) -> None:
@@ -336,23 +318,19 @@ def test_ground_truth_context_omits_target_cue_and_notes(scenarios) -> None:
         rendered_lower = rendered.lower()
         for phrase in _label_naming_phrases(scenario.target_context):
             if phrase in rendered_lower:
-                leaks.append(
-                    f"{scenario.scenario_id}: {phrase!r} found in ground_truth_context"
-                )
-        if scenario.change_type and scenario.change_type.lower() in rendered_lower:
+                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in ground_truth_context")
+        if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: cue_type {scenario.change_type!r} found in "
+                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
                 f"ground_truth_context"
             )
         if scenario.notes and len(scenario.notes) >= 8:
             if scenario.notes.lower() in rendered_lower:
                 leaks.append(
-                    f"{scenario.scenario_id}: authoring notes appear in "
-                    f"ground_truth_context"
+                    f"{scenario.scenario_id}: authoring notes appear in ground_truth_context"
                 )
-    assert not leaks, (
-        "ground_truth_context exposes privileged fields for:\n  - "
-        + "\n  - ".join(leaks)
+    assert not leaks, "ground_truth_context exposes privileged fields for:\n  - " + "\n  - ".join(
+        leaks
     )
 
 
@@ -374,21 +352,17 @@ def test_full_rendered_judge_prompt_omits_privileged_fields(scenarios) -> None:
         rendered_lower = rendered.lower()
         for phrase in _label_naming_phrases(scenario.target_context):
             if phrase in rendered_lower:
-                leaks.append(
-                    f"{scenario.scenario_id}: {phrase!r} found in rendered judge prompt"
-                )
-        if scenario.change_type and scenario.change_type.lower() in rendered_lower:
+                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in rendered judge prompt")
+        if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: cue_type {scenario.change_type!r} found in "
+                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
                 f"rendered judge prompt"
             )
         if scenario.notes and len(scenario.notes) >= 8:
             if scenario.notes.lower() in rendered_lower:
                 leaks.append(
-                    f"{scenario.scenario_id}: authoring notes appear in rendered "
-                    f"judge prompt"
+                    f"{scenario.scenario_id}: authoring notes appear in rendered judge prompt"
                 )
-    assert not leaks, (
-        "Rendered judge prompt exposes privileged fields for:\n  - "
-        + "\n  - ".join(leaks)
+    assert not leaks, "Rendered judge prompt exposes privileged fields for:\n  - " + "\n  - ".join(
+        leaks
     )

@@ -69,7 +69,7 @@ For open-weight Hugging Face models, see [`docs/running_open_weights.md`](docs/r
 
 ```bash
 pytest -q                             # Run tests
-python scripts/validate_scenarios.py  # Validate the bank
+python scripts/validate_scenarios.py  # Validate the scenario set
 wac-bench --help                      # Show runner options
 ```
 
@@ -106,10 +106,10 @@ The scene descriptions include visible details such as shape, material, color, m
 
 | Subset (`subset` value) | Size | Purpose |
 |---|---:|---|
-| Scenario Bank (`bank`) | 50 scenarios | Primary subset across 8 shift types |
+| Main Subset (`main`) | 50 scenarios | Primary subset across 8 shift types |
 | Contrast (`contrast`) | 20 scenarios | Distractor-rich minimal pairs where the earlier object or scene may still be visible |
 
-The Scenario Bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
+The main subset covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
 
 For category counts, scenario fields, and authoring rules, see the [dataset card](data/README.md), [schema](docs/schema.md), and [authoring rules](docs/scenario_authoring_rules.md).
 
@@ -147,8 +147,8 @@ For the full scope statement, see [`docs/benchmark_spec.md`](docs/benchmark_spec
 
 | Path | Purpose |
 |---|---|
-| [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, report, runner |
-| [`data/`](data) | Frozen scenario bank, prompt conditions, runtime config, lockfile |
+| [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, aggregation, rendering, runner |
+| [`data/`](data) | Frozen scenario set, prompt conditions, runtime config, lockfile |
 | [`tests/`](tests) | Runtime and input-validation tests |
 | [`scripts/`](scripts) | Helper scripts — see [`scripts/README.md`](scripts/README.md) |
 | [`.env.example`](.env.example) | Environment variable template |

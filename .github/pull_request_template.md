@@ -27,7 +27,7 @@ rather than an in-place edit.
 - [ ] `uv run pytest -q` passes
 - [ ] `uv run ruff check .` passes
 - [ ] `uv run mypy wearable_assistant_context_bench` passes
-- [ ] If touching the scenario bank: `python scripts/validate_scenarios.py` passes
+- [ ] If touching the scenario set: `python scripts/validate_scenarios.py` passes
 - [ ] If touching scoring or judge logic: a published baseline still produces matching aggregates
 
 ## Notes for the reviewer

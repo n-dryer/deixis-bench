@@ -34,7 +34,6 @@ JUDGE_MODEL_ID_GEMINI = "gemini-2.5-flash"
 JUDGE_MODEL_ID_OPENAI = "openai/gpt-4.1-mini"
 JUDGE_TEMPERATURE = 0.0
 JUDGE_MAX_TOKENS = 1024
-JUDGE_PROMPT_VERSION = "0.1.0"
 
 
 ALLOWED_POLICIES: tuple[str, ...] = ("current", "prior", "clarify", "abstain")
@@ -100,7 +99,7 @@ class JudgeAdapterBase(ABC):
 class GeminiJudgeAdapter(JudgeAdapterBase):
     """Gemini-backed judge adapter using the native google-genai SDK.
 
-    Wraps `core.gemini_adapter.GeminiAdapter` for single-shot
+    Wraps `wearable_assistant_context_bench.gemini_adapter.GeminiAdapter` for single-shot
     system+user judge calls. Used when the resolved judge family is
     `gemini` and the model id is a bare Gemini name (no provider
     prefix); provider-qualified ids like
@@ -226,7 +225,9 @@ class LLMJudge:
             max_tokens: Upper bound on judge response length.
         """
         self._adapter: JudgeAdapterBase = (
-            adapter if adapter is not None else LiteLLMJudgeAdapter(
+            adapter
+            if adapter is not None
+            else LiteLLMJudgeAdapter(
                 family="claude",
                 temperature=temperature,
                 max_tokens=max_tokens,
@@ -361,8 +362,7 @@ def resolve_judge_family(
     """
     if requested not in ("auto", "claude", "gemini", "openai"):
         raise ValueError(
-            f"--judge-family must be auto, claude, gemini, or openai; "
-            f"got {requested!r}"
+            f"--judge-family must be auto, claude, gemini, or openai; got {requested!r}"
         )
     if requested in ("claude", "gemini", "openai"):
         return requested, "explicit"
@@ -446,8 +446,7 @@ def _build_user_prompt(
     ground_truth_section = ""
     if ground_truth_context:
         ground_truth_section = (
-            f"GROUND TRUTH (judge-only, not visible to the candidate):\n"
-            f"{ground_truth_context}\n\n"
+            f"GROUND TRUTH (judge-only, not visible to the candidate):\n{ground_truth_context}\n\n"
         )
     return (
         f"SCENARIO (Turn 1 context and state shift):\n{scenario_description}\n\n"
@@ -520,9 +519,7 @@ def parse_verdict(raw: str) -> JudgeVerdict:
     if not (raw or "").strip():
         return JudgeVerdict(
             selected_label="abstain",
-            rationale=(
-                "(no-response fallback — candidate or judge returned empty)"
-            ),
+            rationale=("(no-response fallback — candidate or judge returned empty)"),
         )
 
     matches = list(_JSON_OBJECT_RE.finditer(raw))
@@ -535,18 +532,13 @@ def parse_verdict(raw: str) -> JudgeVerdict:
             payload = {}
         if payload:
             selected_label = payload.get("selected_label")
-            if (
-                not isinstance(selected_label, str)
-                or selected_label not in ALLOWED_POLICIES
-            ):
+            if not isinstance(selected_label, str) or selected_label not in ALLOWED_POLICIES:
                 raise ValueError(
                     f"Judge verdict 'selected_label' must be one of "
                     f"{ALLOWED_POLICIES}, got {selected_label!r}"
                 )
             rationale = str(payload.get("rationale", "")).strip()
-            return JudgeVerdict(
-                selected_label=selected_label, rationale=rationale
-            )
+            return JudgeVerdict(selected_label=selected_label, rationale=rationale)
 
     label = _strict_label_line(raw)
     if label is not None:

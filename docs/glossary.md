@@ -42,7 +42,7 @@ A reference whose meaning depends on the situational context — gesture, gaze, 
 One conversational unit. Three turns: optional pre-conversation frame, Turn 1 (initial state), Turn 2 (after a context shift), and a Turn 3 repair prompt fired only when `--enable-repair` is set. Stored as one JSON line in `data/scenarios.jsonl`.
 
 ### `scenario_id`
-Unique identifier for a scenario. Format `sc-NN` for the bank, `adv-NN` for the contrast subset.
+Unique identifier for a scenario. Format `sc-NN` for the main subset, `adv-NN` for the contrast subset.
 
 ### Test scenarios
 Synonym for the published scenarios in `data/scenarios.jsonl`. The benchmark is an evaluation set — there is no train/val/test split; every scenario is for inference and labeling.
@@ -57,15 +57,15 @@ Synonym for the published scenarios in `data/scenarios.jsonl`. The benchmark is 
 <summary><strong>Subsets, scenario fields, and how scenarios are categorized</strong></summary>
 
 ### Subset
-A grouping of scenarios. The `subset` field on every scenario marks which one it belongs to. Two subsets: `bank` and `contrast`. Filterable on the runner via `--subset {bank,contrast}`.
+A grouping of scenarios. The `subset` field on every scenario marks which one it belongs to. Two subsets: `main` and `contrast`. Filterable on the runner via `--subset {main,contrast}`.
 
-### `bank` (Scenario Bank)
-The primary 50-scenario subset. Distribution is pinned: 12 / 8 / 6 / 6 / 5 / 5 / 4 / 4 across the 8 change types.
+### `main` (Main Subset)
+The primary 50-scenario subset. Distribution is pinned: 12 / 8 / 6 / 6 / 5 / 5 / 4 / 4 across the 8 shift types.
 
 ### `contrast` (Contrast Subset)
 A 20-scenario subset of distractor-rich minimal pairs. The earlier object or scene may still be visible at Turn 2.
 
-### `change_type`
+### `shift_type`
 The category of context shift between Turn 1 and Turn 2. One of eight values:
 
 | Value | What changes |
@@ -86,7 +86,7 @@ The grounding target a well-functioning assistant should pick. One of `current`,
 Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `absent_referent`, `compound_shift`. Affects how hard the scenario is to disambiguate.
 
 ### `difficulty_tier`
-Author-assigned difficulty. One of `easy`, `medium`, `hard`. The bank pins distribution at 15 / 20 / 15.
+Author-assigned difficulty. One of `easy`, `medium`, `hard`. The main subset pins distribution at 15 / 20 / 15.
 
 ### `time_gap_bucket`
 Approximate time between Turn 1 and Turn 2: `seconds`, `minutes`, `hours`, or `next_day`.
@@ -147,7 +147,7 @@ Inline dict on each scenario record carrying four answer lists. Visible to the j
 <summary><strong>LLM-as-judge: labels, family resolution, and the prompt contract</strong></summary>
 
 ### LLM judge / LLM-as-judge
-A second model that labels each Turn 2 (and Turn 3 when present) response with one of four labels: `current`, `prior`, `clarify`, `abstain`. Sees the user message, the scene descriptions, the gold answer lists, and a ground-truth section naming the actual objects in frame. Never sees `target_context` or `change_type`, which would leak the answer.
+A second model that labels each Turn 2 (and Turn 3 when present) response with one of four labels: `current`, `prior`, `clarify`, `abstain`. Sees the user message, the scene descriptions, the gold answer lists, and a ground-truth section naming the actual objects in frame. Never sees `target_context` or `shift_type`, which would leak the answer.
 
 ### Judge label
 The judge's verdict for one trial. One of `current`, `prior`, `clarify`, `abstain`. Stored as `selected_label` on the JudgeVerdict and as `turn_2_judge_label` / `turn_3_judge_label` on each transcript row. A trial is correct when the judge label equals the scenario's `target_context`.
@@ -165,7 +165,7 @@ Default behavior. Picks a judge from a different family than the candidate (Clau
 Optional second judge held constant across all candidate runs in a comparison sweep.
 
 ### Judge prompt
-The system prompt that defines the judge's task and JSON output contract. Versioned (`JUDGE_PROMPT_VERSION`) and hashed into every run's manifest. Lives in `wearable_assistant_context_bench/llm_judge.py`. Privileged-field constraint enforced by `tests/test_llm_judge.py`.
+The system prompt that defines the judge's task and JSON output contract. Hashed into every run's manifest. Lives in `wearable_assistant_context_bench/llm_judge.py`. Privileged-field constraint enforced by `tests/test_llm_judge.py`.
 
 </details>
 
@@ -233,16 +233,16 @@ Per-class recall. `current_recall` = trials with `target_context == "current"` t
 Mean of the per-class recalls. The headline number for a run.
 
 ### Wilson CI
-Wilson score confidence interval for a binomial proportion. Used for per-class recall, per-subset recall, per-change-type recall. Well-calibrated for small N and proportions near 0 or 1; unlike the Wald (normal) approximation, Wilson never overshoots [0, 1].
+Wilson score confidence interval for a binomial proportion. Used for per-class recall, per-subset recall, per-shift-type recall. Well-calibrated for small N and proportions near 0 or 1; unlike the Wald (normal) approximation, Wilson never overshoots [0, 1].
 
 ### Bootstrap CI
 Non-parametric percentile bootstrap. Reported alongside Wilson on the primary metric (mean of two proportions, where Wilson is awkward).
 
 ### Per-subset recall
-Mean recall sliced by `subset`. Lets you compare how a model holds up on `bank` vs `contrast`.
+Mean recall sliced by `subset`. Lets you compare how a model holds up on `main` vs `contrast`.
 
-### Per-change-type recall
-Pass rate sliced by `change_type`. Surfaces categories the model handles well vs poorly.
+### Per-shift-type recall
+Pass rate sliced by `shift_type`. Surfaces categories the model handles well vs poorly.
 
 ### Contrast pair consistency
 Among contrast-subset scenarios that share a `pair_id`, the share of pairs where every member trial passes. Reported only when `pair_id` metadata is populated.
@@ -281,13 +281,13 @@ One execution of the runner. Identified by its `output_dir`.
 Per-trial result dicts, one per line. Gitignored; regenerate by re-running the matching command.
 
 ### `findings.md`
-Auto-generated Markdown report rendered by `wearable_assistant_context_bench.report.render_findings_markdown`. Includes the benchmark summary, per-class / per-subset / per-change-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
+Auto-generated Markdown report rendered by `wearable_assistant_context_bench.rendering.render_findings_markdown`. Includes the benchmark summary, per-class / per-subset / per-shift-type breakdowns, hedging behavior, the scenario × condition matrix, and the reproducibility manifest as a JSON code block.
 
 ### `summary.json`
 Machine-readable companion to `findings.md`. Aggregate metrics + manifest in JSON for downstream tooling. Committed alongside `findings.md`; transcripts are not.
 
 ### Reproducibility manifest
-A JSON block embedded in every `findings.md` (and a `manifest_versions` field in every `summary.json`). Names the benchmark version, judge prompt version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, subset, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
+A JSON block embedded in every `findings.md` (and a `benchmark_version` field plus the same fields in every `summary.json`). Names the benchmark version, content hashes (`scenarios_sha256`, `prompt_conditions_sha256`, `judge_prompt_sha256`), candidate / judge model IDs, trials, temperature, subset, and the runner's git commit. Two runs with matching hashes evaluate against the same content.
 
 ### Ablation
 A category of run that holds everything constant except one variable to measure that variable's contribution.
@@ -302,19 +302,13 @@ A category of run that holds everything constant except one variable to measure 
 <summary><strong>Versioning, the lockfile, and the validator</strong></summary>
 
 ### `MANIFEST.lock.json`
-Static lockfile at `data/MANIFEST.lock.json`. Pins SHA256 hashes of `scenarios.jsonl`, `prompt_conditions.json`, and the judge-prompt template, plus `BENCHMARK_VERSION`, `JUDGE_PROMPT_VERSION`, and `SCHEMA_REVISION`. Hash drift without a coordinated version bump fails CI.
+Static lockfile at `data/MANIFEST.lock.json`. Pins SHA256 hashes of `scenarios.jsonl`, `prompt_conditions.json`, and the judge-prompt template, plus `BENCHMARK_VERSION`. Hash drift without a coordinated version bump fails CI.
 
 ### Validator
 `scripts/validate_scenarios.py`. Runs five programmatic checks: token leakage, object-name leakage, schema validation, cross-scenario duplication, and manifest-lock drift. Run by CI on every PR.
 
 ### `BENCHMARK_VERSION`
-String constant in `wearable_assistant_context_bench/report.py`. Currently `0.1`. Bumps coordinated with content changes; reported in every run's manifest.
-
-### `JUDGE_PROMPT_VERSION`
-String constant in `wearable_assistant_context_bench/llm_judge.py`. Currently `0.1.0`. Bumps when the judge prompt template changes.
-
-### `SCHEMA_REVISION`
-Integer counter for the on-disk scenario format. Currently `1`. Bumps when the schema fields change in incompatible ways.
+String constant in `wearable_assistant_context_bench/aggregation.py`. Currently `0.1.0`. Single source of truth for the benchmark version; matches `pyproject.toml:version`. Bumps coordinated with content changes; reported in every run's manifest.
 
 </details>
 
@@ -329,7 +323,7 @@ Integer counter for the on-disk scenario format. Currently `1`. Bumps when the s
 
 | Path | What's there |
 |---|---|
-| `wearable_assistant_context_bench/` | The single Python package. Adapters, judge, runner, scoring, report, statistics. |
+| `wearable_assistant_context_bench/` | The single Python package. Adapters, judge, runner, scoring, aggregation, rendering, statistics. |
 | `data/` | Frozen content used at runtime: `scenarios.jsonl`, `prompt_conditions.json`, `config.json`, `MANIFEST.lock.json`, `README.md` (dataset card). |
 | `runs/` | Published baseline run results. One subdirectory per run; each contains `findings.md` and `summary.json`. |
 | `tests/` | Five test files mirroring module names: `test_adapters.py`, `test_llm_judge.py`, `test_metrics.py`, `test_runner.py`, `test_schema.py`, plus `conftest.py`. |

@@ -1,7 +1,7 @@
 """Runner for the Wearable Assistant Context Bench.
 
 Implements the cross-turn reference-resolution task over the scenario
-bank. Each scenario is a 2-turn conversation; on Turn 2 the runner
+set. Each scenario is a 2-turn conversation; on Turn 2 the runner
 labels the candidate's response with the LLM judge. When
 ``enable_repair`` is set, a Turn 2 failure triggers a templated Turn 3
 repair prompt and the response is labeled again. Per-trial transcripts
@@ -34,10 +34,14 @@ except ImportError:
     # slimmed environments. Keys must come from the shell in that case.
     pass
 
+from wearable_assistant_context_bench.aggregation import (
+    BENCHMARK_VERSION,
+    DEFAULT_RANKING_CONDITION,
+    build_run_summary_dict,
+)
 from wearable_assistant_context_bench.gemini_adapter import GeminiAdapter
 from wearable_assistant_context_bench.litellm_adapter import LiteLLMAdapter
 from wearable_assistant_context_bench.llm_judge import (
-    JUDGE_PROMPT_VERSION,
     JUDGE_SYSTEM_PROMPT,
     JudgeVerdict,
     LLMJudge,
@@ -50,13 +54,7 @@ from wearable_assistant_context_bench.prompt_conditions import (
     PromptCondition,
     load_prompt_conditions,
 )
-from wearable_assistant_context_bench.report import (
-    BENCHMARK_VERSION,
-    DEFAULT_RANKING_CONDITION,
-    SCHEMA_REVISION,
-    build_run_summary_dict,
-    render_findings_markdown,
-)
+from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import score_response
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -100,10 +98,10 @@ CONFIG: dict[str, Any] = {
     # is recorded as-is with no repair attempt. When True, the runner
     # fires the templated repair anchor and labels the Turn 3 response.
     "enable_repair": False,
-    # Scenario subset to evaluate. `bank` is the frozen 50-scenario
-    # bank. `contrast` is the separately-tagged 20-scenario
+    # Scenario subset to evaluate. `main` is the frozen 50-scenario
+    # primary subset. `contrast` is the separately-tagged 20-scenario
     # distractor-rich subset of controlled minimal pairs.
-    "subset": "bank",
+    "subset": "main",
 }
 
 
@@ -139,10 +137,10 @@ class Scenario:
 
     JSON line schema (one object per line):
         scenario_id: str
-        subset: str   # "bank" or "contrast"
+        subset: str   # "main" or "contrast"
         pair_id: str | None  # optional contrast-pair grouping key
         target_context: str  # current | prior | clarify | abstain
-        change_type: str        # one of the eight change_type values
+        shift_type: str        # one of the eight shift_type values
         activity_domain: str
         referent_complexity: str
         difficulty_tier: str  # easy | medium | hard
@@ -167,7 +165,7 @@ class Scenario:
 
     scenario_id: str
     target_context: str
-    change_type: str
+    shift_type: str
     activity_domain: str
     referent_complexity: str
     difficulty_tier: str
@@ -176,7 +174,7 @@ class Scenario:
     turn_2_image: str
     turn_2_user: str
     turn_3_repair_prompt: str
-    subset: str = "bank"
+    subset: str = "main"
     pair_id: str | None = None
     context_image: str | None = None
     time_gap_bucket: str | None = None
@@ -185,9 +183,7 @@ class Scenario:
     gold: AnswerSet = field(default_factory=AnswerSet)
 
 
-def load_scenarios(
-    path: Path = SCENARIOS_PATH, subset: str | None = None
-) -> list[Scenario]:
+def load_scenarios(path: Path = SCENARIOS_PATH, subset: str | None = None) -> list[Scenario]:
     """Load scenarios from ``scenarios.jsonl``, optionally filtered by subset.
 
     Each line is one JSON object. When ``subset`` is non-None, only
@@ -212,10 +208,10 @@ def load_scenarios(
             scenarios.append(
                 Scenario(
                     scenario_id=entry["scenario_id"],
-                    subset=entry.get("subset", "bank"),
+                    subset=entry.get("subset", "main"),
                     pair_id=entry.get("pair_id"),
                     target_context=entry["target_context"],
-                    change_type=entry["change_type"],
+                    shift_type=entry["shift_type"],
                     activity_domain=entry["activity_domain"],
                     referent_complexity=entry["referent_complexity"],
                     difficulty_tier=entry["difficulty_tier"],
@@ -227,9 +223,7 @@ def load_scenarios(
                     context_image=entry.get("context_image"),
                     time_gap_bucket=entry.get("time_gap_bucket"),
                     notes=entry.get("notes", ""),
-                    turn_3_repair_prompt_deictic=entry.get(
-                        "turn_3_repair_prompt_deictic"
-                    ),
+                    turn_3_repair_prompt_deictic=entry.get("turn_3_repair_prompt_deictic"),
                     gold=gold,
                 )
             )
@@ -301,40 +295,30 @@ def _build_manifest(
             warnings.append(f"{key} could not be hashed from {path}")
         return value
 
-    judge_prompt_sha = hashlib.sha256(
-        JUDGE_SYSTEM_PROMPT.encode("utf-8")
-    ).hexdigest()
+    judge_prompt_sha = hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest()
 
-    pack = effective_config.get("subset", "bank")
+    pack = effective_config.get("subset", "main")
 
     manifest: dict[str, Any] = {
         "benchmark_version": BENCHMARK_VERSION,
-        "schema_revision": SCHEMA_REVISION,
         "subset": pack,
         "camera_injection": not bool(effective_config.get("no_camera", False)),
         "scenarios_sha256": _sha_or_warn(SCENARIOS_PATH, "scenarios_sha256"),
         "prompt_conditions_sha256": _sha_or_warn(
             PROMPT_CONDITIONS_PATH, "prompt_conditions_sha256"
         ),
-        "judge_prompt_version": JUDGE_PROMPT_VERSION,
         "judge_prompt_sha256": judge_prompt_sha,
         "candidate_model": effective_config["model_id"],
         "judge_model": resolved_judge.model_id,
         "judge_family": resolved_judge.family,
         "judge_family_resolution": judge_resolution_mode,
-        "ranking_judge_model": (
-            ranking_judge.model_id if ranking_judge is not None else None
-        ),
-        "ranking_judge_family": (
-            ranking_judge.family if ranking_judge is not None else None
-        ),
+        "ranking_judge_model": (ranking_judge.model_id if ranking_judge is not None else None),
+        "ranking_judge_family": (ranking_judge.family if ranking_judge is not None else None),
         "trials": int(effective_config["trials_per_cell"]),
         "temperature": float(effective_config["temperature"]),
         "ranking_condition": effective_config["ranking_condition"],
         "enable_repair": bool(effective_config.get("enable_repair", False)),
-        "timestamp_utc": datetime.now(UTC).isoformat(
-            timespec="seconds"
-        ),
+        "timestamp_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "runner_git_commit": _current_git_commit(),
         "random_seed": None,
     }
@@ -367,11 +351,12 @@ def run(
             config keys; ``None`` if those are unset.
 
     Returns:
-        Per-trial result dicts ready for `core.report` aggregation.
+        Per-trial result dicts ready for
+        `wearable_assistant_context_bench.aggregation` aggregation.
     """
     effective_config = {**CONFIG, **(config or {})}
 
-    pack = effective_config.get("subset", "bank")
+    pack = effective_config.get("subset", "main")
     scenarios = load_scenarios(SCENARIOS_PATH, subset=pack)
     conditions = load_prompt_conditions(PROMPT_CONDITIONS_PATH)
 
@@ -379,9 +364,7 @@ def run(
         model_id=effective_config["model_id"],
         temperature=effective_config["temperature"],
     )
-    adapter_ = adapter if adapter is not None else _build_adapter(
-        effective_config["model_id"]
-    )
+    adapter_ = adapter if adapter is not None else _build_adapter(effective_config["model_id"])
 
     if judge is None:
         family, resolution_mode = resolve_judge_family(
@@ -428,9 +411,7 @@ def run(
                         enable_repair=enable_repair,
                     )
                     results.append(result)
-                    transcript_file.write(
-                        json.dumps(result, ensure_ascii=False) + "\n"
-                    )
+                    transcript_file.write(json.dumps(result, ensure_ascii=False) + "\n")
 
     manifest = _build_manifest(
         effective_config=effective_config,
@@ -463,9 +444,8 @@ def run(
 
     return results
 
-def _resolve_repair_anchor(
-    scenario: Scenario, repair_style: str
-) -> tuple[str, str]:
+
+def _resolve_repair_anchor(scenario: Scenario, repair_style: str) -> tuple[str, str]:
     """Return ``(anchor_text, resolved_style)`` for the Turn 3 repair.
 
     ``repair_style="named"`` always uses ``scenario.turn_3_repair_prompt``.
@@ -574,9 +554,7 @@ def _run_one_trial(
     repair_attempted = False
     turn_3_ranking_verdict: JudgeVerdict | None = None
 
-    repair_anchor_text, resolved_repair_style = _resolve_repair_anchor(
-        scenario, repair_style
-    )
+    repair_anchor_text, resolved_repair_style = _resolve_repair_anchor(scenario, repair_style)
 
     if enable_repair and not turn_2_passed:
         repair_attempted = True
@@ -615,7 +593,7 @@ def _run_one_trial(
         "condition": condition.name,
         "trial": trial,
         "target_context": scenario.target_context,
-        "change_type": scenario.change_type,
+        "shift_type": scenario.shift_type,
         "activity_domain": scenario.activity_domain,
         "difficulty_tier": scenario.difficulty_tier,
         "context_image": scenario.context_image,
@@ -630,51 +608,33 @@ def _run_one_trial(
         "turn_2_judge_rationale": judge_verdict.rationale,
         "turn_2_passed": turn_2_passed,
         "turn_3_repair_attempted": repair_attempted,
-        "turn_3_repair_prompt": (
-            repair_anchor_text if repair_attempted else None
-        ),
-        "turn_3_repair_style": (
-            resolved_repair_style if repair_attempted else None
-        ),
+        "turn_3_repair_prompt": (repair_anchor_text if repair_attempted else None),
+        "turn_3_repair_style": (resolved_repair_style if repair_attempted else None),
         "turn_3_response": turn_3_response,
-        "turn_3_judge_label": (
-            turn_3_verdict.selected_label if turn_3_verdict else None
-        ),
-        "turn_3_judge_rationale": (
-            turn_3_verdict.rationale if turn_3_verdict else None
-        ),
+        "turn_3_judge_label": (turn_3_verdict.selected_label if turn_3_verdict else None),
+        "turn_3_judge_rationale": (turn_3_verdict.rationale if turn_3_verdict else None),
         "turn_3_repair_passed": turn_3_passed,
     }
     if ranking_judge is not None:
         result["turn_2_ranking_judge_label"] = (
-            turn_2_ranking_verdict.selected_label
-            if turn_2_ranking_verdict
-            else None
+            turn_2_ranking_verdict.selected_label if turn_2_ranking_verdict else None
         )
         result["turn_2_ranking_judge_rationale"] = (
             turn_2_ranking_verdict.rationale if turn_2_ranking_verdict else None
         )
         result["turn_2_ranking_passed"] = (
-            (
-                turn_2_ranking_verdict.selected_label
-                == scenario.target_context
-            )
+            (turn_2_ranking_verdict.selected_label == scenario.target_context)
             if turn_2_ranking_verdict
             else None
         )
         result["turn_3_ranking_judge_label"] = (
-            turn_3_ranking_verdict.selected_label
-            if turn_3_ranking_verdict
-            else None
+            turn_3_ranking_verdict.selected_label if turn_3_ranking_verdict else None
         )
         result["turn_3_ranking_judge_rationale"] = (
             turn_3_ranking_verdict.rationale if turn_3_ranking_verdict else None
         )
         result["turn_3_ranking_repair_passed"] = (
-            (
-                turn_3_ranking_verdict.selected_label
-                == scenario.target_context
-            )
+            (turn_3_ranking_verdict.selected_label == scenario.target_context)
             if turn_3_ranking_verdict
             else None
         )
@@ -684,7 +644,7 @@ def _run_one_trial(
 def _build_scenario_description(scenario: Scenario) -> str:
     """Construct the scenario description shown to the judge.
 
-    Names neither the target_context nor the change_type. Both would
+    Names neither the target_context nor the shift_type. Both would
     leak the answer the judge is being asked to produce. The judge
     is pointed at the Turn 2 user message and camera frame as the
     perceptual fields that determine what the assistant should now
@@ -706,7 +666,7 @@ def _build_ground_truth_context(scenario: Scenario) -> str:
     the activity domain so it can determine whether the response
     reflects T2 or T1 context.
 
-    Deliberately omits target_context, change_type, and authoring notes.
+    Deliberately omits target_context, shift_type, and authoring notes.
     Those would either name or category-hint the answer the judge is
     being asked to produce.
     """
@@ -753,9 +713,7 @@ def _build_context_image_message(image: str) -> dict[str, str]:
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Run the Wearable Assistant Context Bench."
-        ),
+        description=("Run the Wearable Assistant Context Bench."),
         epilog=(
             "Example: python -m wearable_assistant_context_bench.runner "
             "--model claude-sonnet-4-6 --judge-model gemini-2.5-flash"
@@ -765,28 +723,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--config",
         dest="config",
         default=None,
-        help=(
-            "path to the runtime JSON config; defaults to "
-            "data/config.json"
-        ),
+        help=("path to the runtime JSON config; defaults to data/config.json"),
     )
     parser.add_argument(
         "--model",
         dest="model",
         default=None,
-        help=(
-            "candidate model ID; default is "
-            f"{CONFIG['model_id']}"
-        ),
+        help=(f"candidate model ID; default is {CONFIG['model_id']}"),
     )
     parser.add_argument(
         "--judge-model",
         dest="judge_model",
         default=None,
-        help=(
-            "judge model ID; defaults to the family-specific judge chosen for "
-            "the run"
-        ),
+        help=("judge model ID; defaults to the family-specific judge chosen for the run"),
     )
     parser.add_argument(
         "--judge-family",
@@ -825,18 +774,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="trials",
         type=int,
         default=None,
-        help=(
-            "trials per (scenario, condition) cell; default is "
-            f"{CONFIG['trials_per_cell']}"
-        ),
+        help=(f"trials per (scenario, condition) cell; default is {CONFIG['trials_per_cell']}"),
     )
     parser.add_argument(
         "--output-dir",
         dest="output_dir",
         default=None,
         help=(
-            "directory for transcripts, findings, and manifest; defaults to "
-            f"{DEFAULT_OUTPUT_DIR}"
+            f"directory for transcripts, findings, and manifest; defaults to {DEFAULT_OUTPUT_DIR}"
         ),
     )
     parser.add_argument(
@@ -866,13 +811,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--subset",
         dest="subset",
-        choices=["bank", "contrast"],
+        choices=["main", "contrast"],
         default=None,
         help=(
-            "Scenario subset to run. `bank` is the frozen 50-scenario "
-            "scenario bank; `contrast` is the separately-tagged "
+            "Scenario subset to run. `main` is the frozen 50-scenario "
+            "primary subset; `contrast` is the separately-tagged "
             "20-scenario distractor-rich subset of controlled minimal "
-            "pairs. Defaults to bank."
+            "pairs. Defaults to main."
         ),
     )
     parser.add_argument(
@@ -924,9 +869,7 @@ def _config_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> None:
     """Parse CLI flags and run the benchmark."""
     args = _parse_args(argv)
-    config_path = (
-        Path(args.config) if getattr(args, "config", None) else DEFAULT_CONFIG_PATH
-    )
+    config_path = Path(args.config) if getattr(args, "config", None) else DEFAULT_CONFIG_PATH
     base_config = load_runtime_config(config_path)
     overrides = _config_overrides_from_args(args)
     merged = {**base_config, **overrides}

@@ -168,7 +168,7 @@ Populate the deictic field only when **all three** are true:
 
 1. `target_context == "current"` (the user is repairing toward the
    present frame).
-2. `change_type` ∈ {`object_in_hand`, `object_in_view`, `object_state`,
+2. `shift_type` ∈ {`object_in_hand`, `object_in_view`, `object_state`,
    `screen_content`, `sequential_task`, `location`}. These are the
    visible-referent categories where a real wearable's vision system
    could resolve a deictic gesture.
