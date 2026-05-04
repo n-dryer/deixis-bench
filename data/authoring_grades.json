@@ -788,5 +788,89 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "absent_referent + abstain; key info hidden by camera angle in T1, object gone in T2"
+  },
+  "sc-136": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: dropped 'pulse','temperature','city name' from gold)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-137": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'color wheel' → 'color disc'; dropped 'saturation' from gold)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-138": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'target marker' → 'target indicator'; dropped 'pace','grade','slope' etc from gold)",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-139": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 5,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-140": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 5,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-141": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'ruler-like' → 'narrow', 'light-level' → 'brightness')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 5,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-142": {
+    "batch": "7a",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": 5,
+    "genuinely_missing_info": null,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content batch 7a"
   }
 }
