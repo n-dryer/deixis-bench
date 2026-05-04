@@ -1064,5 +1064,101 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "cross_session_reference; context_image holds the pre-session frame"
+  },
+  "sc-159": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'cutting board' → 'wood block')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-160": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-161": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'kettle' → 'stovetop vessel')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-162": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-163": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-164": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'level' → 'layer'; 'pencil' → 'writing implement')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-165": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
+  },
+  "sc-166": {
+    "batch": "8b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'wheel' → 'steering rim'; 'needle' → 'indicator')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "cross_session_reference + abstain; 8 distinct missing-modality patterns (audio not captured, behind angles, blurred numbers, off-screen at moment of interest, inside containers, glare/low-light, ephemeral, mentioned in passing)"
   }
 }
