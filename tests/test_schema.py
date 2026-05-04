@@ -75,7 +75,7 @@ ALLOWED_ACTIVITY_DOMAINS = {
     "navigation",
 }
 
-SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2}$")
+SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2,}$")
 
 
 # Make ``scripts/validate_scenarios.py`` importable from tests.
