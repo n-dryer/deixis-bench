@@ -3,7 +3,7 @@
   "schema_revision": 1,
   "judge_prompt_version": "0.1.0",
   "judge_prompt_sha256": "9af89d3743512a47f98c27dd2bdd39175141b26677e18841f713316805953e9e",
-  "scenarios_sha256": "cb0d4aa49b2145b8765b48f283509ddbc8227928a3c9c14223ef71eac9d5cf6e",
+  "scenarios_sha256": "01ecaa4b769fff9a75b3fda08821e2837fb28b211f25841363fd2db30259df7f",
   "prompt_conditions_sha256": "374ca5837b4ca75cfa2f6b2fd65769c23ccefcf04697b29af19e109a7f6bebe9",
   "_note": "Static lockfile. scripts/validate_scenarios.py compares computed hashes against this lock and fails CI if they drift without a coordinated benchmark_version bump. Regenerate by running scripts/regen_manifest_lock.py."
 }

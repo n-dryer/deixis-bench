@@ -256,6 +256,23 @@ or decline to answer:
 Both lists may be empty for scenarios where the target is `current` or
 `prior`.
 
+### Minimum item count (CI-enforced)
+
+When the scenario's `target_context` requires a list, that list must
+contain at least **7 items**:
+
+| `target_context` | required list | floor |
+|---|---|---|
+| `current` | `current_answers` | 7 |
+| `prior` | `prior_answers` | 7 |
+| `clarify` | `clarify_indicators` | 7 |
+| `abstain` | `abstain_indicators` | 7 |
+
+The three-category content rule above is verified by manual review.
+The count floor is verified automatically by
+`scripts/validate_scenarios.py` and trips CI if any required list has
+fewer than 7 items.
+
 ---
 
 ## Runner injection format
@@ -299,6 +316,16 @@ Every scenario must pass all ten before being committed:
 10. Each `current_answers` and `prior_answers` list includes at least
     one item from each of the three vocabulary categories (object
     name, technique vocabulary, state descriptors)
+11. The required gold list for the scenario's `target_context` has at
+    least 7 items (`current_answers` for `current` target, etc.)
+12. `activity_domain` is one of the 14 allowed values (closed enum;
+    see `VALID_ACTIVITY_DOMAINS` in `scripts/validate_scenarios.py`)
+13. `turn_3_repair_prompt_deictic` is non-null exactly when
+    `target_context == "current"` AND `change_type` is not in
+    `{absent_referent, cross_session_reference}`; null otherwise
+14. `cross_session_reference` scenarios have a non-null `context_image`
 
-The validation script enforces points 1, 2, 8, 9, and 10 automatically.
-Points 3, 4, 5, 6, and 7 require semantic review.
+The validation script enforces points 1, 2, 8, 9, 11, 12, 13, and 14
+automatically. Point 10 (three-category content rule) requires manual
+review during authoring. Points 3, 4, 5, 6, and 7 require semantic
+review.

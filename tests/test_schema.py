@@ -54,10 +54,29 @@ ALLOWED_COGNITIVE_LOADS = {
     "single_referent",
     "multi_referent",
     "distractor_present",
-    "absent_referent",
-    "compound_shift",
+    "referent_offscreen",
 }
 ALLOWED_PACKS = {"bank", "contrast"}
+
+# Closed enum for activity_domain. Source of truth lives next to the validator
+# in scripts/validate_scenarios.py (V1 check). Tests load the same set so a
+# domain rename only needs one update.
+ALLOWED_ACTIVITY_DOMAINS = {
+    "kitchen",
+    "garden",
+    "workshop",
+    "art_craft",
+    "automotive",
+    "fitness",
+    "household",
+    "communication",
+    "electronics",
+    "office",
+    "sports",
+    "music",
+    "finance",
+    "navigation",
+}
 
 SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2}$")
 
@@ -134,14 +153,14 @@ def test_target_contexts_in_allowed_set(all_records: list[dict]) -> None:
 def test_packs_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
         assert entry["subset"] in ALLOWED_PACKS, (
-            f"{entry['scenario_id']}: unexpected pack {entry['pack']!r}"
+            f"{entry['scenario_id']}: unexpected subset {entry['subset']!r}"
         )
 
 
 def test_cue_types_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
         assert entry["change_type"] in ALLOWED_CUE_TYPES, (
-            f"{entry['scenario_id']}: unexpected cue_type {entry['cue_type']!r}"
+            f"{entry['scenario_id']}: unexpected change_type {entry['change_type']!r}"
         )
 
 
@@ -155,7 +174,21 @@ def test_difficulty_tiers_in_allowed_set(all_records: list[dict]) -> None:
 def test_cognitive_loads_in_allowed_set(all_records: list[dict]) -> None:
     for entry in all_records:
         assert entry["referent_complexity"] in ALLOWED_COGNITIVE_LOADS, (
-            f"{entry['scenario_id']}: unexpected cognitive_load {entry['cognitive_load']!r}"
+            f"{entry['scenario_id']}: unexpected referent_complexity "
+            f"{entry['referent_complexity']!r}"
+        )
+
+
+def test_activity_domains_in_allowed_set(all_records: list[dict]) -> None:
+    """V1: activity_domain is a closed enum.
+
+    Catches typos and tag drift (e.g. ``home`` vs ``household``) at CI
+    time so the long tail of singletons can't grow back.
+    """
+    for entry in all_records:
+        assert entry["activity_domain"] in ALLOWED_ACTIVITY_DOMAINS, (
+            f"{entry['scenario_id']}: unexpected activity_domain "
+            f"{entry['activity_domain']!r}; allowed: {sorted(ALLOWED_ACTIVITY_DOMAINS)}"
         )
 
 
@@ -210,48 +243,95 @@ def test_every_scenario_has_inline_gold(all_records: list[dict]) -> None:
             assert isinstance(gold[key], list), f"{sid}.gold.{key}: must be a list"
 
 
-def test_current_target_has_three_plus_current_answers(
-    all_records: list[dict],
-) -> None:
+# Floor for ``gold`` answer/indicator lists when ``target_context`` requires
+# them. Mirrors ``GOLD_LIST_MIN_ITEMS`` in scripts/validate_scenarios.py.
+GOLD_LIST_MIN_ITEMS = 7
+
+
+def test_current_target_meets_gold_floor(all_records: list[dict]) -> None:
+    """V2: target_context=current rows have >= GOLD_LIST_MIN_ITEMS current_answers."""
     for entry in all_records:
         if entry["target_context"] != "current":
             continue
         sid = entry["scenario_id"]
-        assert len(entry["gold"]["current_answers"]) >= 3, (
-            f"{sid}: target_context=current requires 3+ items in current_answers"
+        n = len(entry["gold"]["current_answers"])
+        assert n >= GOLD_LIST_MIN_ITEMS, (
+            f"{sid}: target_context=current requires "
+            f"{GOLD_LIST_MIN_ITEMS}+ items in current_answers (found {n})"
         )
 
 
-def test_prior_target_has_three_plus_prior_answers(
-    all_records: list[dict],
-) -> None:
+def test_prior_target_meets_gold_floor(all_records: list[dict]) -> None:
+    """V2: target_context=prior rows have >= GOLD_LIST_MIN_ITEMS prior_answers."""
     for entry in all_records:
         if entry["target_context"] != "prior":
             continue
         sid = entry["scenario_id"]
-        assert len(entry["gold"]["prior_answers"]) >= 3, (
-            f"{sid}: target_context=prior requires 3+ items in prior_answers"
+        n = len(entry["gold"]["prior_answers"])
+        assert n >= GOLD_LIST_MIN_ITEMS, (
+            f"{sid}: target_context=prior requires "
+            f"{GOLD_LIST_MIN_ITEMS}+ items in prior_answers (found {n})"
         )
 
 
-def test_clarify_target_has_clarify_indicators(all_records: list[dict]) -> None:
+def test_clarify_target_meets_indicator_floor(all_records: list[dict]) -> None:
+    """V3: target_context=clarify rows have >= GOLD_LIST_MIN_ITEMS clarify_indicators."""
     for entry in all_records:
         if entry["target_context"] != "clarify":
             continue
         sid = entry["scenario_id"]
-        assert entry["gold"]["clarify_indicators"], (
-            f"{sid}: target_context=clarify requires non-empty clarify_indicators"
+        n = len(entry["gold"]["clarify_indicators"])
+        assert n >= GOLD_LIST_MIN_ITEMS, (
+            f"{sid}: target_context=clarify requires "
+            f"{GOLD_LIST_MIN_ITEMS}+ items in clarify_indicators (found {n})"
         )
 
 
-def test_abstain_target_has_abstain_indicators(all_records: list[dict]) -> None:
+def test_abstain_target_meets_indicator_floor(all_records: list[dict]) -> None:
+    """V3: target_context=abstain rows have >= GOLD_LIST_MIN_ITEMS abstain_indicators."""
     for entry in all_records:
         if entry["target_context"] != "abstain":
             continue
         sid = entry["scenario_id"]
-        assert entry["gold"]["abstain_indicators"], (
-            f"{sid}: target_context=abstain requires non-empty abstain_indicators"
+        n = len(entry["gold"]["abstain_indicators"])
+        assert n >= GOLD_LIST_MIN_ITEMS, (
+            f"{sid}: target_context=abstain requires "
+            f"{GOLD_LIST_MIN_ITEMS}+ items in abstain_indicators (found {n})"
         )
+
+
+# ``change_type`` values where a deictic-only repair anchor cannot resolve
+# the reference. Mirrors ``NON_DEICTIC_CHANGE_TYPES`` in
+# scripts/validate_scenarios.py.
+NON_DEICTIC_CHANGE_TYPES = {"absent_referent", "cross_session_reference"}
+
+
+def test_deictic_repair_null_contract(all_records: list[dict]) -> None:
+    """V5: ``turn_3_repair_prompt_deictic`` is non-null exactly when
+    ``target_context == 'current'`` and the referent is visible at Turn 2
+    (``change_type`` not in ``NON_DEICTIC_CHANGE_TYPES``).
+    """
+    for entry in all_records:
+        sid = entry["scenario_id"]
+        deictic = entry.get("turn_3_repair_prompt_deictic")
+        is_present = bool(deictic)
+        should_be_present = (
+            entry["target_context"] == "current"
+            and entry["change_type"] not in NON_DEICTIC_CHANGE_TYPES
+        )
+        if should_be_present:
+            assert is_present, (
+                f"{sid}: target_context=current with visible referent "
+                f"(change_type={entry['change_type']!r}) requires non-null "
+                "turn_3_repair_prompt_deictic"
+            )
+        else:
+            assert not is_present, (
+                f"{sid}: turn_3_repair_prompt_deictic must be null when "
+                "the referent isn't deictically resolvable "
+                f"(target_context={entry['target_context']!r}, "
+                f"change_type={entry['change_type']!r})"
+            )
 
 
 def test_composition_includes_all_four_contexts(all_records: list[dict]) -> None:

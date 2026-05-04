@@ -27,16 +27,16 @@ JSON Lines: one scenario object per line.
 | `target_context` | enum | yes | The correct grounding target for a well-functioning assistant. One of `current`, `prior`, `clarify`, `abstain`. | `"current"` |
 | `change_type` | enum | yes | The category of context shift between Turn 1 and Turn 2 (the shift type). See list below. | `"object_in_hand"` |
 | `activity_domain` | string | yes | Domain tag (e.g., `workshop`, `kitchen`, `garden`). Used for coverage reporting. | `"workshop"` |
-| `referent_complexity` | enum | yes | Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `absent_referent`, `compound_shift`. | `"single_referent"` |
+| `referent_complexity` | enum | yes | Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `referent_offscreen`. The `referent_offscreen` value covers cases where the target object isn't in the current view (renamed from the prior `absent_referent` value to avoid collision with the `change_type` value of the same name). | `"single_referent"` |
 | `difficulty_tier` | enum | yes | Internal difficulty estimate. One of `easy`, `medium`, `hard`. | `"medium"` |
-| `time_gap_bucket` | enum | no | Approximate time between Turn 1 and Turn 2. One of `seconds`, `minutes`, `hours`, `next_day`. | `"seconds"` |
+| `time_gap_bucket` | enum or null | no | Approximate time between Turn 1 and Turn 2. One of `seconds`, `minutes`, `hours`, `next_day`. Null means the gap is short enough to be considered the same continuous segment of activity (no narrative time skip between turns); use this when none of the four buckets meaningfully applies. | `"seconds"` |
 | `context_image` | string or null | yes | Video frame description of what was visible **before the conversation started**. Null when `turn_1_image` already establishes the starting state. Required for scenarios where the user asks about a state from before Turn 1. | `null` |
 | `turn_1_image` | string or null | yes | Video frame description at the moment Turn 1 is spoken. A scene description; describes physical properties without naming the object. | `"Hand resting on a slim metal handle..."` |
 | `turn_1_user` | string | yes | First user message. Natural speech only. Must not narrate visible objects or evaluate technique. | `"How do I get more torque on this?"` |
 | `turn_2_image` | string or null | yes | Video frame description at the moment Turn 2 is spoken. Different from `turn_1_image` (this is where the context shift becomes visible). | `"Hand wrapped around a wooden handle..."` |
 | `turn_2_user` | string | yes | Second user message after the context change. Natural follow-up. Must not announce the shift. | `"Am I doing this right?"` |
 | `turn_3_repair_prompt` | string | yes | Named repair prompt fired after a Turn 2 miss. Maximally specific user correction that names both the intended and the wrong objects. | `"I mean the hammer I'm holding now, not the screwdriver from before."` |
-| `turn_3_repair_prompt_deictic` | string or null | no | Deictic-only repair prompt for visible-referent `current`-target scenarios. Used when the runner is invoked with `--repair-style deictic`. Pure spatial/temporal pronouns ("this", "what I'm holding now") with no object names. Null for scenarios where a deictic gesture cannot resolve the reference (`absent_referent`, `cross_session_reference`, or `target_context != current`); the runner falls back to the named anchor in those cases. | `"I mean this thing in my hand right now."` |
+| `turn_3_repair_prompt_deictic` | string or null | no | Deictic-only repair prompt for visible-referent `current`-target scenarios. Used when the runner is invoked with `--repair-style deictic`. Pure spatial/temporal pronouns ("this", "what I'm holding now") with no object names. **Null/non-null contract (CI-enforced):** non-null exactly when `target_context == "current"` AND `change_type` is not in `{absent_referent, cross_session_reference}`; null otherwise. The runner falls back to the named anchor whenever this field is null. | `"I mean this thing in my hand right now."` |
 | `notes` | string | no | Authoring commentary. Not used by the runner. | `"Object swap mid-task; Turn 2 deictic."` |
 
 ### target_context values
@@ -92,6 +92,22 @@ This three-category rule ensures the judge can score responses that
 name the object, responses that describe technique without naming the
 object, and responses that describe state, all as evidence of which
 context the model used.
+
+### Minimum item counts (CI-enforced)
+
+When the scenario's `target_context` requires a list, that list must
+contain at least **7 items**:
+
+| `target_context` | required list | floor |
+|---|---|---|
+| `current` | `current_answers` | 7 |
+| `prior` | `prior_answers` | 7 |
+| `clarify` | `clarify_indicators` | 7 |
+| `abstain` | `abstain_indicators` | 7 |
+
+The three-category content rule above is verified by manual review during
+authoring; the count floor is verified by `scripts/validate_scenarios.py`
+in CI. Lists not required by the scenario's target may be empty.
 
 ### Scoring contract
 

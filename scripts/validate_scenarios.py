@@ -25,6 +25,42 @@ SCENARIOS_PATH = Path("data/scenarios.jsonl")
 PROMPT_CONDITIONS_PATH = Path("data/prompt_conditions.json")
 LOCKFILE_PATH = Path("data/MANIFEST.lock.json")
 
+# Closed enum for ``activity_domain`` (V1). Single source of truth — tests
+# import this set so a domain rename only needs one update. Adding a new
+# domain requires editing this list and updating the docs.
+VALID_ACTIVITY_DOMAINS: frozenset[str] = frozenset({
+    "kitchen",
+    "garden",
+    "workshop",
+    "art_craft",
+    "automotive",
+    "fitness",
+    "household",
+    "communication",
+    "electronics",
+    "office",
+    "sports",
+    "music",
+    "finance",
+    "navigation",
+})
+
+# ``change_type`` values for which a deictic-only repair anchor cannot
+# resolve the reference (V5). The referent isn't visible at Turn 2, so a
+# pronoun like "this" doesn't pick it out and the runner falls back to the
+# named anchor.
+NON_DEICTIC_CHANGE_TYPES: frozenset[str] = frozenset({
+    "absent_referent",
+    "cross_session_reference",
+})
+
+# Floor for ``gold.current_answers`` and ``gold.prior_answers`` lists when
+# the scenario's ``target_context`` requires them. Promotes the unwritten
+# convention into a hard CI check (V2/V3). Item-count alone doesn't prove
+# the three-category rule (object name / technique / state) — that's a
+# manual review check — but a floor of 7 makes the convention auditable.
+GOLD_LIST_MIN_ITEMS = 7
+
 # Common-object blocklist for image descriptions. Image descriptions must
 # NOT name the object directly. This list is non-exhaustive but catches
 # obvious cases.
@@ -156,6 +192,10 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "object_in_view", "absent_referent", "screen_content",
         "cross_session_reference",
     }
+    valid_referent_complexity = {
+        "single_referent", "multi_referent", "distractor_present",
+        "referent_offscreen",
+    }
     valid_difficulty = {"easy", "medium", "hard"}
     valid_subset = {"bank", "contrast"}
 
@@ -203,12 +243,62 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                 "check": "schema",
                 "detail": f"invalid difficulty_tier: {sc.get('difficulty_tier')!r}",
             })
-        # cross_session_reference must have non-null context_image
+        if sc.get("referent_complexity") not in valid_referent_complexity:
+            fails.append({
+                "scenario_id": sid,
+                "check": "schema",
+                "detail": (
+                    f"invalid referent_complexity: "
+                    f"{sc.get('referent_complexity')!r}; allowed: "
+                    f"{sorted(valid_referent_complexity)}"
+                ),
+            })
+        # V1: activity_domain must be in the closed enum.
+        if sc.get("activity_domain") not in VALID_ACTIVITY_DOMAINS:
+            fails.append({
+                "scenario_id": sid,
+                "check": "schema",
+                "detail": (
+                    f"invalid activity_domain: {sc.get('activity_domain')!r}; "
+                    f"allowed: {sorted(VALID_ACTIVITY_DOMAINS)}"
+                ),
+            })
+        # V4: cross_session_reference must have non-null context_image.
         if sc.get("change_type") == "cross_session_reference" and not sc.get("context_image"):
             fails.append({
                 "scenario_id": sid,
                 "check": "schema",
                 "detail": "cross_session_reference scenarios must have context_image populated",
+            })
+        # V5: turn_3_repair_prompt_deictic null/non-null contract.
+        # Non-null exactly when target_context=current AND change_type
+        # admits a deictic gesture (i.e. the referent is visible at T2).
+        deictic_present = bool(sc.get("turn_3_repair_prompt_deictic"))
+        deictic_expected = (
+            sc.get("target_context") == "current"
+            and sc.get("change_type") not in NON_DEICTIC_CHANGE_TYPES
+        )
+        if deictic_expected and not deictic_present:
+            fails.append({
+                "scenario_id": sid,
+                "check": "schema",
+                "detail": (
+                    "turn_3_repair_prompt_deictic must be non-null for "
+                    "target_context=current scenarios where the referent "
+                    "is visible at Turn 2 "
+                    f"(change_type={sc.get('change_type')!r})"
+                ),
+            })
+        if not deictic_expected and deictic_present:
+            fails.append({
+                "scenario_id": sid,
+                "check": "schema",
+                "detail": (
+                    "turn_3_repair_prompt_deictic must be null when the "
+                    "referent isn't deictically resolvable "
+                    f"(target_context={sc.get('target_context')!r}, "
+                    f"change_type={sc.get('change_type')!r})"
+                ),
             })
         # turn_1_image and turn_2_image must be populated
         if not sc.get("turn_1_image"):
@@ -232,46 +322,83 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
                 "detail": "missing or invalid `gold` field",
             })
             continue
-        # Three-category answer rule for current and prior
+        # V2/V3: gold-list floors and the three-category rule.
+        # ``current_answers`` and ``prior_answers`` must each include at
+        # least ``GOLD_LIST_MIN_ITEMS`` entries spanning the three required
+        # vocabulary categories (object name, technique, state).
+        # Item-count is auditable here; the three-category split is verified
+        # by manual review during authoring.
         target = sc.get("target_context")
         if target == "current":
-            if not gold.get("current_answers"):
+            n = len(gold.get("current_answers", []))
+            if n == 0:
                 fails.append({
                     "scenario_id": sid,
                     "check": "schema",
                     "detail": "current target_context but current_answers is empty",
                 })
-            if len(gold.get("current_answers", [])) < 3:
+            elif n < GOLD_LIST_MIN_ITEMS:
                 fails.append({
                     "scenario_id": sid,
                     "check": "schema",
-                    "detail": "current_answers must include 3+ items (object name, technique, state) — fewer than 3 found",
+                    "detail": (
+                        f"current_answers must include {GOLD_LIST_MIN_ITEMS}+ items "
+                        "(object name, technique, state) — "
+                        f"only {n} found"
+                    ),
                 })
         if target == "prior":
-            if not gold.get("prior_answers"):
+            n = len(gold.get("prior_answers", []))
+            if n == 0:
                 fails.append({
                     "scenario_id": sid,
                     "check": "schema",
                     "detail": "prior target_context but prior_answers is empty",
                 })
-            if len(gold.get("prior_answers", [])) < 3:
+            elif n < GOLD_LIST_MIN_ITEMS:
                 fails.append({
                     "scenario_id": sid,
                     "check": "schema",
-                    "detail": "prior_answers must include 3+ items (object name, technique, state) — fewer than 3 found",
+                    "detail": (
+                        f"prior_answers must include {GOLD_LIST_MIN_ITEMS}+ items "
+                        "(object name, technique, state) — "
+                        f"only {n} found"
+                    ),
                 })
-        if target == "abstain" and not gold.get("abstain_indicators"):
-            fails.append({
-                "scenario_id": sid,
-                "check": "schema",
-                "detail": "abstain target_context but abstain_indicators is empty",
-            })
-        if target == "clarify" and not gold.get("clarify_indicators"):
-            fails.append({
-                "scenario_id": sid,
-                "check": "schema",
-                "detail": "clarify target_context but clarify_indicators is empty",
-            })
+        if target == "clarify":
+            n = len(gold.get("clarify_indicators", []))
+            if n == 0:
+                fails.append({
+                    "scenario_id": sid,
+                    "check": "schema",
+                    "detail": "clarify target_context but clarify_indicators is empty",
+                })
+            elif n < GOLD_LIST_MIN_ITEMS:
+                fails.append({
+                    "scenario_id": sid,
+                    "check": "schema",
+                    "detail": (
+                        f"clarify_indicators must include {GOLD_LIST_MIN_ITEMS}+ "
+                        f"items — only {n} found"
+                    ),
+                })
+        if target == "abstain":
+            n = len(gold.get("abstain_indicators", []))
+            if n == 0:
+                fails.append({
+                    "scenario_id": sid,
+                    "check": "schema",
+                    "detail": "abstain target_context but abstain_indicators is empty",
+                })
+            elif n < GOLD_LIST_MIN_ITEMS:
+                fails.append({
+                    "scenario_id": sid,
+                    "check": "schema",
+                    "detail": (
+                        f"abstain_indicators must include {GOLD_LIST_MIN_ITEMS}+ "
+                        f"items — only {n} found"
+                    ),
+                })
 
     # Distribution checks (bank only).
     if enforce_distribution:

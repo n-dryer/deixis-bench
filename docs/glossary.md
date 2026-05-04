@@ -83,13 +83,13 @@ The category of context shift between Turn 1 and Turn 2. One of eight values:
 The grounding target a well-functioning assistant should pick. One of `current`, `prior`, `clarify`, `abstain`.
 
 ### `referent_complexity`
-Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `absent_referent`, `compound_shift`. Affects how hard the scenario is to disambiguate.
+Internal complexity estimate. One of `single_referent`, `multi_referent`, `distractor_present`, `referent_offscreen`. Affects how hard the scenario is to disambiguate. (`referent_offscreen` was renamed from the prior `absent_referent` value to avoid collision with the `change_type` value of the same name.)
 
 ### `difficulty_tier`
 Author-assigned difficulty. One of `easy`, `medium`, `hard`. The bank pins distribution at 15 / 20 / 15.
 
 ### `time_gap_bucket`
-Approximate time between Turn 1 and Turn 2: `seconds`, `minutes`, `hours`, or `next_day`.
+Approximate time between Turn 1 and Turn 2: `seconds`, `minutes`, `hours`, or `next_day`. Null when none of the four buckets applies — i.e., the gap is short enough to count as the same continuous segment of activity.
 
 ### `pair_id`
 Optional grouping key for contrast A/B pairs. When populated, the report computes pair consistency.
