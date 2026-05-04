@@ -872,5 +872,101 @@
     "deictic_naturalness": 5,
     "distinctness": 5,
     "domain_coverage_note": "screen_content batch 7a"
+  },
+  "sc-143": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-144": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-145": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-146": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-147": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-148": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-149": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass (post-fix: 'needle' → 'indicator')",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
+  },
+  "sc-150": {
+    "batch": "7b",
+    "token_leakage": "pass",
+    "object_names_in_images": "pass",
+    "three_category_gold": "pass",
+    "genuine_ambiguity": null,
+    "genuinely_missing_info": 5,
+    "scene_plausibility": 5,
+    "deictic_naturalness": 5,
+    "distinctness": 5,
+    "domain_coverage_note": "screen_content+abstain; missing axis labels/units/values not on either screen"
   }
 }
