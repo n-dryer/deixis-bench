@@ -30,3 +30,27 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
       - run: uv run pytest --cov=wearable_assistant_context_bench --cov-report=term-missing
+
+  scenario-audit:
+    # Advisory: re-classifies every scenario from script content alone
+    # and reports change_type / difficulty_tier disagreements with the
+    # authored metadata. Drift surfaces in the logs and as a CSV
+    # artifact; nothing blocks the build.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - name: Run scenario audit
+        run: uv run python scripts/audit_scenarios.py
+        continue-on-error: true
+      - name: Upload audit CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenarios-audit
+          path: data/scenarios.audit.csv
+          if-no-files-found: warn
