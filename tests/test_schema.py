@@ -54,7 +54,6 @@ ALLOWED_COGNITIVE_LOADS = {
     "single_referent",
     "multi_referent",
     "distractor_present",
-    "absent_referent",
     "referent_offscreen",
     "compound_shift",
 }

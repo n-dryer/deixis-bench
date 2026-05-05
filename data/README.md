@@ -54,53 +54,53 @@ and video (scene-description) channels; the judge additionally
 receives the answer lists and a ground-truth section naming the
 actual objects in frame.
 
-## Statistics (Main Subset)
+## Statistics
 
 | Statistic | Value |
 |---|---|
-| Total scenarios | 50 |
+| Total scenarios | 166 |
 | Distinct activity domains | 16 |
 
 ### Shift-type distribution (`shift_type`)
 
 | Category | Count |
 |---|---|
-| `object_in_hand` | 12 |
-| `object_state` | 8 |
-| `sequential_task` | 6 |
-| `location` | 6 |
-| `object_in_view` | 5 |
-| `absent_referent` | 5 |
-| `screen_content` | 4 |
-| `cross_session_reference` | 4 |
+| `object_in_hand` | 21 |
+| `object_state` | 22 |
+| `sequential_task` | 18 |
+| `location` | 22 |
+| `object_in_view` | 21 |
+| `absent_referent` | 21 |
+| `screen_content` | 21 |
+| `cross_session_reference` | 20 |
 
 ### `target_context` distribution
 
 | Label | Count |
 |---|---|
-| `current` | 33 |
-| `prior` | 12 |
-| `clarify` | 3 |
-| `abstain` | 2 |
+| `current` | 46 |
+| `prior` | 40 |
+| `clarify` | 40 |
+| `abstain` | 40 |
 
 ### `difficulty_tier` distribution
 
 | Tier | Count |
 |---|---|
-| `easy` | 15 |
-| `medium` | 20 |
-| `hard` | 15 |
+| `easy` | 30 |
+| `medium` | 75 |
+| `hard` | 61 |
 
 ### Activity-domain coverage
 
-The main subset spans 16 distinct activity domains, including kitchen,
+The bank spans 16 distinct activity domains, including kitchen,
 workshop, garden, art and craft, automotive, electronics, sports,
 fitness, music, household, office, navigation, finance, and
 communication.
 
 ## Curation
 
-All 70 scenarios follow the rules in
+All 166 scenarios follow the rules in
 [`../../docs/scenario_authoring_rules.md`](../../docs/scenario_authoring_rules.md).
 Each scenario passes six validation checks before inclusion.
 
