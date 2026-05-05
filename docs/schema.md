@@ -64,6 +64,12 @@ types"; the JSON field name remains `change_type`.)
 | `screen_content` | Both Turn 1 and Turn 2 are looking at a screen; the screen content has changed. |
 | `cross_session_reference` | Requires `context_image`; Turn 2 asks about a state that existed before Turn 1. |
 
+When a shift could plausibly fit more than one category, follow the
+precedence order in [`scenario_authoring_rules.md`](scenario_authoring_rules.md#choosing-between-change_type-values).
+The short version: pick the most specific category. `sequential_task`
+is the last resort — only use it when the same surface and object
+remain in frame and only the operation has changed.
+
 ---
 
 ## gold field (inline on each scenario)
