@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wearable-assistant-context-bench"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cross-turn reference-resolution benchmark for multimodal AI assistants used actively for advice or coaching, wearable or handheld."
 readme = "README.md"
 license = { file = "LICENSE" }

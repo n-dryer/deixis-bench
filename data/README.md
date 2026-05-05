@@ -35,11 +35,16 @@ distinguished by the `subset` field:
 
 | `subset` value | Count | Purpose |
 |---|---|---|
-| `main` | 50 | The primary 50-scenario subset. |
-| `contrast` | 20 | Distractor-rich minimal pairs. Run via `--subset contrast`. |
+| `main` | 166 | The unified scenario set with pinned shift_type distribution. |
 
-There is no train/val/test split. All 70 scenarios are intended for
-inference and labeling, not training.
+The `subset` field is currently always `main`. It is retained for
+forward-compatibility if a future split is introduced. There is no
+train/val/test split — all 166 scenarios are intended for inference
+and labeling, not training.
+
+Scenarios with legacy `adv-NN` ids were originally authored as a
+separate distractor-rich contrast pack and have since been folded
+into the unified set; their ids remain stable for traceability.
 
 ### Data fields
 

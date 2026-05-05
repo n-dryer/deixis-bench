@@ -104,10 +104,7 @@ Each scenario is a three-turn conversation. Between Turn 1 and Turn 2, the user 
 
 The scene descriptions include visible details such as shape, material, color, motion, and position. They avoid naming the object directly.
 
-| Subset (`subset` value) | Size | Purpose |
-|---|---:|---|
-| Main Subset (`main`) | 50 scenarios | Primary subset across 8 shift types |
-| Contrast (`contrast`) | 20 scenarios | Distractor-rich minimal pairs where the earlier object or scene may still be visible |
+All 166 scenarios live in a single unified set with `subset = "main"`. The pinned distribution covers 8 shift types and includes both straightforward references and distractor-rich cases where the earlier object or scene may still be visible. Legacy `adv-NN` ids in the bank were authored separately as a distractor pack and were later folded in; their ids are kept stable for traceability.
 
 The main subset covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
 

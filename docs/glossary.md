@@ -57,13 +57,10 @@ Synonym for the published scenarios in `data/scenarios.jsonl`. The benchmark is 
 <summary><strong>Subsets, scenario fields, and how scenarios are categorized</strong></summary>
 
 ### Subset
-A grouping of scenarios. The `subset` field on every scenario marks which one it belongs to. Two subsets: `main` and `contrast`. Filterable on the runner via `--subset {main,contrast}`.
+The `subset` field on every scenario is always `main` in the unified 166-scenario set. The field is retained for forward-compatibility if a future split is introduced.
 
-### `main` (Main Subset)
-The primary 50-scenario subset. Distribution is pinned: 12 / 8 / 6 / 6 / 5 / 5 / 4 / 4 across the 8 shift types.
-
-### `contrast` (Contrast Subset)
-A 20-scenario subset of distractor-rich minimal pairs. The earlier object or scene may still be visible at Turn 2.
+### `main` (Unified Set)
+The full 166-scenario set. Distribution is pinned across the 8 shift types: `object_in_hand` 21, `object_state` 22, `sequential_task` 18, `location` 22, `object_in_view` 21, `absent_referent` 21, `screen_content` 21, `cross_session_reference` 20. Scenarios with legacy `adv-NN` ids were originally authored as a separate distractor-rich contrast pack and have since been folded in; their ids remain stable.
 
 ### `shift_type`
 The category of context shift between Turn 1 and Turn 2. One of eight values:

@@ -55,11 +55,12 @@ ALLOWED_COGNITIVE_LOADS = {
     "multi_referent",
     "distractor_present",
     "absent_referent",
+    "referent_offscreen",
     "compound_shift",
 }
-ALLOWED_PACKS = {"main", "contrast"}
+ALLOWED_PACKS = {"main"}
 
-SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2}$")
+SCENARIO_ID_PATTERN = re.compile(r"^(sc|adv)-\d{2,3}$")
 
 
 # Make ``scripts/validate_scenarios.py`` importable from tests.
@@ -88,11 +89,6 @@ def all_records() -> list[dict]:
 @pytest.fixture(scope="module")
 def main_subset(all_records: list[dict]) -> list[dict]:
     return [r for r in all_records if r.get("subset") == "main"]
-
-
-@pytest.fixture(scope="module")
-def contrast(all_records: list[dict]) -> list[dict]:
-    return [r for r in all_records if r.get("subset") == "contrast"]
 
 
 # ---------------------------------------------------------------------------

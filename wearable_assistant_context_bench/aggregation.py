@@ -9,7 +9,7 @@ matrix used by the Markdown renderer in
 
 Expected per-trial result dict keys:
     scenario_id (str)
-    subset (str): "main" or "contrast"
+    subset (str): always "main" in the unified scenario set
     pair_id (str | None)
     target_context (str): one of "current", "prior", "clarify", "abstain"
     shift_type (str)
@@ -68,7 +68,7 @@ CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "condition_a", "condition_b")
 AUXILIARY_POLICY_NOTE: str = "auxiliary; not included in the primary current/prior score"
 
 BENCHMARK_NAME: str = "Wearable Assistant Context Bench"
-BENCHMARK_VERSION: str = "0.1.0"
+BENCHMARK_VERSION: str = "0.1.1"
 BENCHMARK_LABEL: str = (
     "situated context-tracking benchmark for multimodal AI assistants "
     "used actively for advice or coaching (wearable or handheld)"
@@ -322,11 +322,13 @@ def recall_by_subset(
     results: list[dict],
     condition: str,
 ) -> dict[str, tuple[float, float, float] | None]:
-    """Mean per-class recall sliced by pack (``main`` / ``contrast``).
+    """Mean per-class recall sliced by ``subset``.
 
-    Returns a dict keyed on pack name. Each value is
+    Returns a dict keyed on subset value. Each value is
     ``(mean, lo, hi)`` from the normal-approximation CI, or ``None``
-    when one of the scored classes has no trials in that pack.
+    when one of the scored classes has no trials. In the unified
+    scenario set, all real trials live in the ``main`` bucket; the
+    function still partitions correctly if a future split is added.
     """
     by_pack: dict[str, list[dict]] = defaultdict(list)
     for trial in results:
@@ -366,10 +368,10 @@ def contrast_pair_consistency(
     results: list[dict],
     condition: str | None = None,
 ) -> dict[str, Any]:
-    """Pair-consistency rate over the contrast pack.
+    """Pair-consistency rate over scenarios linked by ``pair_id``.
 
-    Groups contrast-pack trials by ``pair_id`` and computes the share
-    of pairs where every member trial passed Turn 2. Trials with no
+    Groups trials by ``pair_id`` and computes the share of pairs
+    where every member trial passed Turn 2. Trials with no
     ``pair_id`` are ignored. When ``condition`` is non-None, only
     trials in that condition contribute.
 
@@ -381,8 +383,6 @@ def contrast_pair_consistency(
     """
     pairs: dict[str, list[bool]] = defaultdict(list)
     for trial in results:
-        if (trial.get("subset") or "main") != "contrast":
-            continue
         if condition is not None and trial["condition"] != condition:
             continue
         pair_id = trial.get("pair_id")
@@ -394,7 +394,7 @@ def contrast_pair_consistency(
             "pairs_evaluated": 0,
             "consistency_rate": None,
             "ci": None,
-            "note": ("no pair_id metadata in current contrast pack; metric not applicable"),
+            "note": ("no pair_id metadata on any scenario; metric not applicable"),
         }
     consistent = sum(1 for outcomes in pairs.values() if all(outcomes))
     total = len(pairs)

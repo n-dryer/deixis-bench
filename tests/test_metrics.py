@@ -531,7 +531,7 @@ def test_render_findings_markdown_shape() -> None:
             "sc-04": "current",
         },
         manifest={
-            "benchmark_version": "0.1.0",
+            "benchmark_version": "0.1.1",
             "scenarios_sha256": "abc",
             "prompt_conditions_sha256": "ghi",
             "candidate_model": "claude-sonnet-4-6",
@@ -561,7 +561,7 @@ def test_render_findings_markdown_shape() -> None:
 
 def test_render_findings_markdown_emits_complete_manifest() -> None:
     manifest = {
-        "benchmark_version": "0.1.0",
+        "benchmark_version": "0.1.1",
         "scenarios_sha256": "sha-scenarios",
         "prompt_conditions_sha256": "sha-prompt-conditions",
         "candidate_model": "claude-sonnet-4-6",
@@ -589,7 +589,7 @@ def test_render_findings_markdown_emits_complete_manifest() -> None:
 def test_render_findings_markdown_manifest_fills_missing_keys() -> None:
     output = render_findings_markdown(
         _fixture_results(),
-        manifest={"benchmark_version": "0.1.0"},
+        manifest={"benchmark_version": "0.1.1"},
     )
     match = re.search(r"```json\n(.*?)\n```", output, re.DOTALL)
     assert match is not None

@@ -20,8 +20,8 @@ JSON Lines: one scenario object per line.
 
 | Field | Type | Required | Description | Example |
 |---|---|---|---|---|
-| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` for main, `adv-NN` for contrast. | `"sc-01"` |
-| `subset` | enum | yes | `"main"` or `"contrast"`. The 50-scenario primary subset vs the 20-scenario distractor-rich contrast pack. | `"main"` |
+| `scenario_id` | string | yes | Unique identifier. Format `sc-NN` (primary) or legacy `adv-NN` (originally authored as a contrast pack, now folded into the unified set). | `"sc-01"` |
+| `subset` | enum | yes | Always `"main"` in the unified 166-scenario set. The field is retained for forward-compatibility. | `"main"` |
 | `pair_id` | string or null | no | Optional grouping key for contrast A/B pairs. Used by the contrast-pair-consistency report metric. | `null` |
 | `gold` | object | yes | Inline gold-label dict. See "gold field" below. Replaces the legacy `expected_answers.json` join. | `{"current_answers": [...], ...}` |
 | `target_context` | enum | yes | The correct grounding target for a well-functioning assistant. One of `current`, `prior`, `clarify`, `abstain`. | `"current"` |

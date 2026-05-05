@@ -356,42 +356,38 @@ def test_config_overrides_from_args_full() -> None:
     }
 
 
-def test_parse_args_accepts_pack_flag_contrast() -> None:
-    args = run_module._parse_args(["--subset", "contrast"])
-    assert args.subset == "contrast"
-    overrides = run_module._config_overrides_from_args(args)
-    assert overrides == {"subset": "contrast"}
-
-
-def test_parse_args_rejects_legacy_pack_values() -> None:
-    """`adversarial` and `hard` were renamed/removed; only `main` and
-    `contrast` remain valid."""
+def test_parse_args_no_longer_exposes_subset_flag() -> None:
+    """The ``--subset`` CLI flag was removed when the contrast pack was
+    folded into the unified main set. Passing it should fail.
+    """
     with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "adversarial"])
+        run_module._parse_args(["--subset", "main"])
     with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "hard"])
+        run_module._parse_args(["--subset", "contrast"])
 
 
-def test_contrast_pack_loads_with_distinct_ids(tmp_path: Path) -> None:
-    """Contrast-pack scenarios have ids ``adv-*`` and load via ``--subset contrast``."""
+def test_legacy_adv_ids_load_in_unified_main_set(tmp_path: Path) -> None:
+    """Scenarios with legacy ``adv-*`` ids are part of the unified main
+    set; the runner loads them alongside ``sc-*`` scenarios.
+    """
     adapter = _StubAdapter()
     judge = _StubJudge()
-    output_dir = tmp_path / "contrast"
+    output_dir = tmp_path / "unified"
     results = run_module.run(
         adapter=adapter,
         judge=judge,
-        config={"output_dir": str(output_dir), "subset": "contrast"},
+        config={"output_dir": str(output_dir)},
     )
     ids = {r["scenario_id"] for r in results}
-    assert all(sid.startswith("adv-") for sid in ids)
-    assert len(ids) == 20
+    assert any(sid.startswith("adv-") for sid in ids)
+    assert any(sid.startswith("sc-") for sid in ids)
     findings = (output_dir / "findings.md").read_text(encoding="utf-8")
     import re as _re
 
     match = _re.search(r"```json\n(.*?)\n```", findings, _re.DOTALL)
     assert match is not None
     payload = json.loads(match.group(1))
-    assert payload["subset"] == "contrast"
+    assert payload["subset"] == "main"
 
 
 def test_manifest_records_run_metadata(tmp_path: Path) -> None:
@@ -417,7 +413,7 @@ def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     assert payload["ranking_judge_model"] is None
     assert payload["ranking_judge_family"] is None
     # Positive: benchmark_version is recorded at the top level.
-    assert payload["benchmark_version"] == "0.1.0"
+    assert payload["benchmark_version"] == "0.1.1"
     # Negative regression guards: removed fields must not reappear.
     assert "schema_revision" not in payload
     assert "judge_prompt_version" not in payload

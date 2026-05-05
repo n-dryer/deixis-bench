@@ -98,9 +98,9 @@ CONFIG: dict[str, Any] = {
     # is recorded as-is with no repair attempt. When True, the runner
     # fires the templated repair anchor and labels the Turn 3 response.
     "enable_repair": False,
-    # Scenario subset to evaluate. `main` is the frozen 50-scenario
-    # primary subset. `contrast` is the separately-tagged 20-scenario
-    # distractor-rich subset of controlled minimal pairs.
+    # Retained for forward-compat: every scenario records subset="main"
+    # in the unified 166-scenario set. The runner loads all scenarios
+    # regardless of this value.
     "subset": "main",
 }
 
@@ -809,18 +809,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--subset",
-        dest="subset",
-        choices=["main", "contrast"],
-        default=None,
-        help=(
-            "Scenario subset to run. `main` is the frozen 50-scenario "
-            "primary subset; `contrast` is the separately-tagged "
-            "20-scenario distractor-rich subset of controlled minimal "
-            "pairs. Defaults to main."
-        ),
-    )
-    parser.add_argument(
         "--repair-style",
         dest="repair_style",
         choices=["named", "deictic"],
@@ -859,8 +847,6 @@ def _config_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
         overrides["no_camera"] = True
     if getattr(args, "repair_style", None) is not None:
         overrides["repair_style"] = args.repair_style
-    if getattr(args, "subset", None) is not None:
-        overrides["subset"] = args.subset
     if getattr(args, "enable_repair", False):
         overrides["enable_repair"] = True
     return overrides

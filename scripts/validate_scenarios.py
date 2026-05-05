@@ -225,9 +225,8 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
     """Check 3: Required fields present, types correct, IDs unique,
     distributions match.
 
-    ``enforce_distribution`` toggles the main-subset shift_type distribution
-    check. The frozen 50-scenario main subset pins exact counts; the
-    contrast pack uses its own distribution and skips this check.
+    ``enforce_distribution`` toggles the shift_type distribution check.
+    The frozen 166-scenario unified set pins exact counts.
     """
     fails = []
     required_scenario_fields = {
@@ -258,7 +257,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "cross_session_reference",
     }
     valid_difficulty = {"easy", "medium", "hard"}
-    valid_subset = {"main", "contrast"}
+    valid_subset = {"main"}
 
     seen_ids = set()
     for sc in scenarios:
@@ -410,14 +409,14 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
     if enforce_distribution:
         shift_type_counts = Counter(sc.get("shift_type") for sc in scenarios)
         expected_shift_type_counts = {
-            "object_in_hand": 12,
-            "object_state": 8,
-            "sequential_task": 6,
-            "location": 6,
-            "object_in_view": 5,
-            "absent_referent": 5,
-            "screen_content": 4,
-            "cross_session_reference": 4,
+            "object_in_hand": 21,
+            "object_state": 22,
+            "sequential_task": 18,
+            "location": 22,
+            "object_in_view": 21,
+            "absent_referent": 21,
+            "screen_content": 21,
+            "cross_session_reference": 20,
         }
         for shift_type, expected_count in expected_shift_type_counts.items():
             if shift_type_counts[shift_type] != expected_count:
@@ -572,31 +571,19 @@ def main() -> int:
 
     all_records = _load_scenarios_jsonl(SCENARIOS_PATH)
     main_subset = [r for r in all_records if r.get("subset") == "main"]
-    contrast = [r for r in all_records if r.get("subset") == "contrast"]
 
     all_fails = []
-    # Main-subset checks (with shift_type distribution enforcement)
     all_fails.extend(check_1_token_leakage(main_subset))
     all_fails.extend(check_2_object_name_in_images(main_subset))
     all_fails.extend(check_3_schema_validation(main_subset, enforce_distribution=True))
     all_fails.extend(check_6_duplication(main_subset))
     all_fails.extend(check_7_lockfile_drift())
 
-    # Contrast pack: same checks except shift_type distribution.
-    if contrast:
-        all_fails.extend(check_1_token_leakage(contrast))
-        all_fails.extend(check_2_object_name_in_images(contrast))
-        all_fails.extend(check_3_schema_validation(contrast, enforce_distribution=False))
-        all_fails.extend(check_6_duplication(contrast))
-
     if args.json:
         print(json.dumps(all_fails, indent=2, ensure_ascii=False))
     else:
         if not all_fails:
-            contrast_note = f" + {len(contrast)} contrast" if contrast else ""
-            print(
-                f"All checks passed ({len(main_subset)} main{contrast_note} scenarios validated)."
-            )
+            print(f"All checks passed ({len(main_subset)} scenarios validated).")
         else:
             print(f"{len(all_fails)} validation failure(s):")
             for f in all_fails:
