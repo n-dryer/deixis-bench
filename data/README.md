@@ -1,70 +1,46 @@
 # Dataset Card: Wearable Assistant Context Bench
 
-## Dataset summary
+## Summary
 
-A cross-turn reference-resolution evaluation set for AI wearable assistants
-used actively for advice or coaching (smart glasses, ear worn
-devices). Each scenario is a three-turn conversation with a
-deliberate context shift between Turn 1 and Turn 2 visible only in
-the scene description. The model must integrate scene descriptions with
-deictic user speech to determine which context the question refers
-to.
+Wearable Assistant Context Bench is a cross-turn reference-resolution
+evaluation set for AI wearable assistants. Each task is a short
+conversation where the user's visible situation changes between Turn 1
+and Turn 2. The model must answer the Turn 2 question using the
+intended scene context.
 
-For product motivation and quickstart, see
-[`README.md`](../../README.md). For the full benchmark contract, see
-[`docs/benchmark_spec.md`](../../docs/benchmark_spec.md).
+The active task bank is `data/tasks.jsonl`. It contains 166 tasks in a
+single flat `main` task set. There is no train, validation, or test
+split because this repo is an evaluation benchmark, not a training
+dataset.
 
-## Supported tasks
+## Files
 
-- **Reference resolution under cross-turn context shift.** The
-  primary task. The judge labels each Turn 2 response as `current`,
-  `prior`, `clarify`, or `abstain`.
-- **Model selection** for deployed AI wearable coaching assistants.
+| File | Purpose |
+|---|---|
+| `tasks.jsonl` | Active task bank. |
+| `prompt_conditions.json` | Prompt conditions applied to every task. |
+| `config.json` | Default runner configuration. |
+| `MANIFEST.lock.json` | Content hashes for reproducibility checks. |
 
-## Languages
+## Fields
 
-English.
-
-## Dataset structure
-
-### Data files
-
-All 70 scenarios live in a single `data/wacb.jsonl` file
-(one JSON object per line) with inline `gold` labels. Records are
-distinguished by the `subset` field:
-
-| `subset` value | Count | Purpose |
-|---|---|---|
-| `main` | 166 | The unified scenario set with pinned shift_type distribution. |
-
-The `subset` field is currently always `main`. It is retained for
-forward-compatibility if a future split is introduced. There is no
-train/val/test split — all 166 scenarios are intended for inference
-and labeling, not training.
-
-Scenarios with legacy `adv-NN` ids were originally authored as a
-separate distractor-rich contrast pack and have since been folded
-into the unified set; their ids remain stable for traceability.
-
-### Data fields
-
-See [`../../docs/schema.md`](../../docs/schema.md) for the full field
-reference. The candidate model receives the audio (text-transcript)
-and video (scene-description) channels; the judge additionally
-receives the answer lists and a ground-truth section naming the
-actual objects in frame.
+Each task has a stable `task_id`, context metadata, Turn 1 and Turn 2
+scene-description text, user speech, optional repair prompts, and
+judge-only `reference_answers`. See [`../docs/schema.md`](../docs/schema.md)
+for the full field contract.
 
 ## Statistics
 
 | Statistic | Value |
-|---|---|
-| Total scenarios | 166 |
-| Distinct activity domains | 16 |
+|---|---:|
+| Total tasks | 166 |
+| Task set | `main` |
+| Domains | 16 |
 
-### Shift-type distribution (`shift_type`)
+### Shift-Type Distribution
 
-| Category | Count |
-|---|---|
+| `shift_type` | Count |
+|---|---:|
 | `object_in_hand` | 21 |
 | `object_state` | 22 |
 | `sequential_task` | 18 |
@@ -74,101 +50,45 @@ actual objects in frame.
 | `screen_content` | 21 |
 | `cross_session_reference` | 20 |
 
-### `target_context` distribution
+### Gold-Label Distribution
 
-| Label | Count |
-|---|---|
+| `gold_label` | Count |
+|---|---:|
 | `current` | 46 |
 | `prior` | 40 |
 | `clarify` | 40 |
 | `abstain` | 40 |
 
-### `difficulty_tier` distribution
+### Difficulty Distribution
 
-| Tier | Count |
-|---|---|
+| `difficulty` | Count |
+|---|---:|
 | `easy` | 30 |
 | `medium` | 75 |
 | `hard` | 61 |
 
-### Activity-domain coverage
+## Validation
 
-The bank spans 16 distinct activity domains, including kitchen,
-workshop, garden, art and craft, automotive, electronics, sports,
-fitness, music, household, office, navigation, finance, and
-communication.
-
-## Curation
-
-All 166 scenarios follow the rules in
-[`../../docs/scenario_authoring_rules.md`](../../docs/scenario_authoring_rules.md).
-Each scenario passes six validation checks before inclusion.
-
-The user message uses natural deictic language without naming
-objects, describing visible properties, or announcing context shifts.
-The scene description describes scene-level features (shape, material,
-color, motion, position) without object names or technique
-evaluation. The gold answers (judge-only) use object names,
-technique vocabulary, and state descriptors.
-
-## Annotations and validation
-
-Every scenario passes six validation checks before being committed:
-
-1. **Token-leakage scan.** Programmatic word-boundary check that no
-   `current_answers` or `prior_answers` token appears in any
-   user-speech field.
-2. **Object-name scan.** Programmatic word-boundary check that no
-   common object name (hammer, screwdriver, pan, etc.) appears in any
-   image field.
-3. **Schema and structural validation.** All required fields
-   present, types correct, scenario IDs unique, category metadata
-   matching, distributions matching the targets.
-4. **Semantic image-identification review.** Semantic check that
-   each image description identifies its object with high confidence
-   to a fresh reader.
-5. **Semantic-leakage isolation test.** Semantic check that the
-   Turn 2 image plus Turn 2 user speech alone (without Turn 1
-   context) is not sufficient to answer the question correctly.
-6. **Cross-scenario duplication check.** Programmatic textual and
-   structural overlap scan to surface near-duplicates.
-
-Checks 1, 2, 3, and 6 run on every PR via
-`scripts/validate_scenarios.py`. Checks 4 and 5 run during
-authoring.
-
-## Running the benchmark
+Run:
 
 ```bash
-wac-bench \
-  --model <candidate_model_id> \
-  --judge-model <judge_model_id> --judge-family <claude|gemini|openai> \
-  --output-dir runs/<run_name>
+uv run python scripts/validate_tasks.py
 ```
 
-Add `--subset contrast` to run against the contrast subset instead of
-the main subset. Add `--no-camera` to strip the `[Camera: ...]` blocks.
-Add `--enable-repair` to run Turn 3 repair after a Turn 2 miss.
-See `wac-bench --help` for the full flag list.
+The validator checks schema shape, task ID uniqueness, distribution
+counts, token leakage, object-name leakage, near-duplication, and
+manifest-lock drift.
 
-Each run writes `findings.md` and `summary.json` to the output
-directory. `transcripts.jsonl` is gitignored; regenerate by re-running
-the same command.
+## Running
 
-## Out-of-scope by design
+```bash
+uv run wac-bench --model <candidate_model_id> --output-dir runs/<run_name>
+```
 
-The benchmark does not measure these:
-
-- Coaching advice quality (correctness, safety, domain
-  appropriateness)
-- Multi-turn dynamics beyond three turns
-- Proactive coaching (assistance offered without a direct
-  question)
-- Domain expertise depth
-- Latency, cost, serving characteristics
-- Speaker attribution, addressee detection, ambient audio
+Add `--no-camera` to strip the `[Camera: ...]` scene-description
+blocks. Add `--enable-repair` to run the optional Turn 3 repair prompt
+after a Turn 2 miss.
 
 ## License
 
-MIT, the same as the rest of the repository. See
-[`../../LICENSE`](../../LICENSE).
+MIT, matching the rest of the repository.

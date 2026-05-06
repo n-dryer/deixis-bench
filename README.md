@@ -19,7 +19,7 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 | Read the benchmark design | [`docs/benchmark_spec.md`](docs/benchmark_spec.md) |
 | Review methodology | [Methodology](#methodology) |
 | Configure API keys | [`docs/api_keys.md`](docs/api_keys.md) |
-| Run open-weight models | [`docs/running_open_weights.md`](docs/running_open_weights.md) |
+| Run open-weight models | [`docs/running_models.md`](docs/running_models.md) |
 | Look up a term | [`docs/glossary.md`](docs/glossary.md) |
 | Report an issue | [GitHub Issues](https://github.com/n-dryer/wearable-assistant-context-bench/issues) |
 
@@ -27,7 +27,7 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 
 Requires Python 3.11+. The fastest path uses [`uv`](https://docs.astral.sh/uv/), Astral's Python project manager.
 
-This benchmark runs from a repo clone. After install, run `wac-bench` from the repo root. Scenario data lives in `data/` and is loaded by relative path.
+This benchmark runs from a repo clone. After install, run `wac-bench` from the repo root. Task data lives in `data/` and is loaded by relative path.
 
 ### Install with uv (recommended)
 
@@ -64,19 +64,19 @@ All runs default to temperature 0.0 for reproducibility. See [`docs/api_keys.md`
 wac-bench --model <candidate_model_id>
 ```
 
-For open-weight Hugging Face models, see [`docs/running_open_weights.md`](docs/running_open_weights.md).
+For open-weight Hugging Face models, see [`docs/running_models.md`](docs/running_models.md).
 
 ### Common commands
 
 ```bash
 pytest -q                             # Run tests
-python scripts/validate_scenarios.py  # Validate the scenario set
+python scripts/validate_tasks.py  # Validate the task set
 wac-bench --help                      # Show runner options
 ```
 
 ## Benchmark design
 
-This section explains what the benchmark sends to the model, how the scenarios work, and how responses are scored.
+This section explains what the benchmark sends to the model, how the tasks work, and how responses are scored.
 
 ### Inputs
 
@@ -103,7 +103,7 @@ flowchart LR
 
 The benchmark is a text-mediated visual context evaluation. It does not send raw audio, images, or video to the candidate model. Audio is represented as user transcript text. Video is represented as scene-description text injected into user turns as `[Camera: ...]` blocks.
 
-Each scenario has three possible turns:
+Each task has three possible turns:
 
 | Turn | Role |
 |---|---|
@@ -113,15 +113,15 @@ Each scenario has three possible turns:
 
 Turn 2 is the primary scored turn. Turn 3 is a recovery diagnostic, not part of the headline score unless repair is explicitly enabled.
 
-The candidate model sees only the user transcript and scene-description text. The judge sees the same conversation plus judge-only reference answers. The candidate never sees the reference answers, target label, shift type, authoring notes, or other privileged metadata.
+The candidate model sees only the user transcript and scene-description text. The judge sees the same conversation plus judge-only reference answers. The candidate never sees the reference answers, `gold_label` value, shift type, authoring notes, or other privileged metadata.
 
 The benchmark ships three prompt conditions:
 
 | Condition | Purpose |
 |---|---|
 | `baseline` | Minimal assistant prompt and default ranking condition |
-| `condition_a` | Context-selection instruction before answering |
-| `condition_b` | Pre-answer scaffold that asks the model to name the relevant context before answering |
+| `context_selection_instruction` | Context-selection instruction before answering |
+| `pre_answer_context_scaffold` | Pre-answer scaffold that asks the model to name the relevant context before answering |
 
 The primary metric is mean recall over the `current` and `prior` labels under the `baseline` condition:
 
@@ -129,32 +129,32 @@ The primary metric is mean recall over the `current` and `prior` labels under th
 primary_score = mean(current_recall, prior_recall)
 ```
 
-The `clarify` and `abstain` labels are reported as auxiliary behavior. They help show whether a model asks for clarification or refuses when the scenario calls for that behavior, but they do not enter the primary score.
+The `clarify` and `abstain` labels are reported as auxiliary behavior. They help show whether a model asks for clarification or refuses when the task calls for that behavior, but they do not enter the primary score.
 
 The judge is an LLM-as-judge classifier. It assigns one label to each Turn 2 response: `current`, `prior`, `clarify`, or `abstain`. By default, `--judge-family auto` chooses a judge from a different model family than the candidate to reduce self-preference risk. For model ranking, use `--ranking-judge-family` so every candidate is also labeled by the same judge family.
 
-Scenario validation has two layers:
+Task validation has two layers:
 
-- Programmatic checks run through `scripts/validate_scenarios.py`: schema validation, token-leakage checks, object-name checks in scene descriptions, duplicate checks, and manifest-lock drift.
+- Programmatic checks run through `scripts/validate_tasks.py`: schema validation, token-leakage checks, object-name checks in scene descriptions, duplicate checks, and manifest-lock drift.
 - Authoring checks review whether scene descriptions identify the intended object without naming it and whether Turn 2 can be answered without relying on the intended context history.
 
-Official model results should be generated only after the scenario set, prompt conditions, judge prompt, and manifest are locked. Raw run outputs should stay out of the public repo unless they are part of a curated official result release.
+Official model results should be generated only after the task set, prompt conditions, judge prompt, and manifest are locked. Raw run outputs should stay out of the public repo unless they are part of a curated official result release.
 
-### Scenarios
+### Tasks
 
-Each scenario is a three-turn conversation. Between Turn 1 and Turn 2, the user changes what they are holding, viewing, doing, or referring to. The user does not spell out the change. The model has to answer the Turn 2 question using the scene the user means at that moment.
+Each task is a three-turn conversation. Between Turn 1 and Turn 2, the user changes what they are holding, viewing, doing, or referring to. The user does not spell out the change. The model has to answer the Turn 2 question using the scene the user means at that moment.
 
 The scene descriptions include visible details such as shape, material, color, motion, and position. They avoid naming the object directly.
 
-The current scenario bank contains 166 scenarios. The pinned distribution covers 8 shift types and includes both straightforward references and distractor-rich cases where the earlier object or scene may still be visible.
+The current task bank contains 166 tasks. The pinned distribution covers 8 shift types and includes both straightforward references and distractor-rich cases where the earlier object or scene may still be visible.
 
-The scenario bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
+The task bank covers 8 shift types: `object_in_hand`, `object_state`, `sequential_task`, `location`, `object_in_view`, `absent_referent`, `screen_content`, and `cross_session_reference`.
 
-For category counts, scenario fields, and authoring rules, see the [dataset card](data/README.md), [schema](docs/schema.md), and [authoring rules](docs/scenario_authoring_rules.md).
+For category counts, task fields, and authoring rules, see the [dataset card](data/README.md), [schema](docs/schema.md), and [authoring rules](docs/task_authoring.md).
 
 ### Scoring and judging
 
-Each scenario is scored on Turn 2, after the scene changes.
+Each task is scored on Turn 2, after the scene changes.
 
 | Label | Meaning |
 |---|---|
@@ -188,7 +188,7 @@ For the full scope statement, see [`docs/benchmark_spec.md`](docs/benchmark_spec
 | Path | Purpose |
 |---|---|
 | [`wearable_assistant_context_bench/`](wearable_assistant_context_bench) | Package: adapters, judge, scoring, aggregation, rendering, runner |
-| [`data/`](data) | Frozen scenario set, prompt conditions, runtime config, lockfile |
+| [`data/`](data) | Frozen task set, prompt conditions, runtime config, lockfile |
 | [`tests/`](tests) | Runtime and input-validation tests |
 | [`scripts/`](scripts) | Helper scripts. See [`scripts/README.md`](scripts/README.md) |
 | [`.env.example`](.env.example) | Environment variable template |

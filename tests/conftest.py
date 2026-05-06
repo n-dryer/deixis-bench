@@ -30,7 +30,7 @@ _PROMPT_CONDITIONS_SAMPLE = [
         "token_count": 13,
     },
     {
-        "name": "condition_a",
+        "name": "context_selection_instruction",
         "description": (
             "Direct policy-selection instruction. Asks the model to "
             "answer from the correct visual context (prior or current) "
@@ -52,7 +52,7 @@ _PROMPT_CONDITIONS_SAMPLE = [
         "token_count": 130,
     },
     {
-        "name": "condition_b",
+        "name": "pre_answer_context_scaffold",
         "description": (
             "Pre-answer scaffold. Requires the model to identify the "
             "relevant visual context (prior or current) before answering."
@@ -199,7 +199,7 @@ class _StubJudge:
     def label(
         self,
         response: str,
-        scenario_description: str,
+        task_description: str,
         turn_2_user: str,
         current_answers: list[str],
         prior_answers: list[str],
@@ -237,32 +237,30 @@ def stub_judge_factory():
 def sample_trial_factory():
     def _make(
         *,
-        scenario_id: str,
+        task_id: str,
         condition: str = "baseline",
         trial: int = 0,
-        target_context: str = "current",
+        gold_label: str = "current",
         turn_2_passed: bool = True,
         turn_2_judge_label: str | None = None,
         turn_2_code_signals: dict | None = None,
         turn_3_repair_attempted: bool = False,
         turn_3_repair_passed: bool | None = None,
-        pack: str = "main",
-        pair_id: str | None = None,
+        task_set: str = "main",
         shift_type: str = "object_in_hand",
     ) -> dict:
         return {
-            "scenario_id": scenario_id,
-            "subset": pack,
-            "pair_id": pair_id,
+            "task_id": task_id,
+            "task_set": task_set,
             "shift_type": shift_type,
             "condition": condition,
             "trial": trial,
-            "target_context": target_context,
+            "gold_label": gold_label,
             "turn_2_passed": turn_2_passed,
             "turn_2_judge_label": (
                 turn_2_judge_label
                 if turn_2_judge_label is not None
-                else (target_context if turn_2_passed else "abstain")
+                else (gold_label if turn_2_passed else "abstain")
             ),
             "turn_2_code_signals": turn_2_code_signals or {},
             "turn_3_repair_attempted": turn_3_repair_attempted,
@@ -273,19 +271,19 @@ def sample_trial_factory():
 
 
 @pytest.fixture(scope="session")
-def scenarios_by_id() -> dict[str, dict]:
-    """Map scenario_id -> scenario dict, loaded from data/wacb.jsonl.
+def tasks_by_id() -> dict[str, dict]:
+    """Map task_id -> task dict, loaded from data/tasks.jsonl.
 
     Used by audit-rubric tests that exercise rules against real bank
     entries instead of inline fixtures.
     """
-    scenarios_path = ROOT / "data" / "wacb.jsonl"
+    tasks_path = ROOT / "data" / "tasks.jsonl"
     out: dict[str, dict] = {}
-    with scenarios_path.open("r", encoding="utf-8") as f:
+    with tasks_path.open("r", encoding="utf-8") as f:
         for raw in f:
             line = raw.strip()
             if not line:
                 continue
             entry = json.loads(line)
-            out[entry["scenario_id"]] = entry
+            out[entry["task_id"]] = entry
     return out

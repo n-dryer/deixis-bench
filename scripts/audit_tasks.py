@@ -1,22 +1,22 @@
-"""Audit the scenario bank's ``shift_type`` and ``difficulty_tier`` metadata.
+"""Audit the task bank's ``shift_type`` and ``difficulty`` metadata.
 
 Two-pass audit:
 
 1. Rule-based: applies the rubric in
-   ``wearable_assistant_context_bench.audit_rubric`` to every scenario
-   in ``data/wacb.jsonl``. Pure-functional, deterministic, fast.
+   ``wearable_assistant_context_bench.audit_rubric`` to every task
+   in ``data/tasks.jsonl``. Pure-functional, deterministic, fast.
 2. LLM-judge spot-check (optional, ``--judge-on-disagreement``): for any
-   scenario where the audit disagrees with metadata on either field,
+   task where the audit disagrees with metadata on either field,
    one structured judge call produces a tie-breaking verdict + rationale.
 
-Output: a per-scenario diff CSV. The audit ignores the metadata fields
-being audited (``shift_type``, ``difficulty_tier``) when forming its
+Output: a per-task diff CSV. The audit ignores the metadata fields
+being audited (``shift_type``, ``difficulty``) when forming its
 verdict, then compares against them in the report.
 
 Usage:
-    python scripts/audit_scenarios.py
-    python scripts/audit_scenarios.py --judge-on-disagreement
-    python scripts/audit_scenarios.py --in data/wacb.jsonl --out data/scenarios.audit.csv
+    python scripts/audit_tasks.py
+    python scripts/audit_tasks.py --judge-on-disagreement
+    python scripts/audit_tasks.py --in data/tasks.jsonl --out data/tasks.audit.csv
 
 Exits 0 always. Mismatches are surfaced in the CSV, not as failures, so
 this script can be invoked without breaking CI.
@@ -40,42 +40,42 @@ if str(REPO_ROOT) not in sys.path:
 
 from wearable_assistant_context_bench.audit_rubric import (  # noqa: E402
     audit_difficulty,
+    audit_gold_label,
     audit_shift_type,
-    audit_target_context,
 )
 
-DEFAULT_INPUT = REPO_ROOT / "data" / "wacb.jsonl"
-DEFAULT_OUTPUT = REPO_ROOT / "data" / "scenarios.audit.csv"
+DEFAULT_INPUT = REPO_ROOT / "data" / "tasks.jsonl"
+DEFAULT_OUTPUT = REPO_ROOT / "data" / "tasks.audit.csv"
 
 JUDGE_DISAGREEMENT_CAP = 60
 
-_logger = logging.getLogger("audit_scenarios")
+_logger = logging.getLogger("audit_tasks")
 
 
 # --- LLM-judge spot-check ------------------------------------------------
 
 
-_AUDIT_JUDGE_SYSTEM_PROMPT = """You are auditing a benchmark scenario's category and difficulty labels from the script content alone.
+_AUDIT_JUDGE_SYSTEM_PROMPT = """You are auditing a benchmark task's category and difficulty labels from the script content alone.
 
 Eight categories (`shift_type`):
 - object_in_hand: A hand grasps one object in Turn 1 and a different object in Turn 2.
 - object_state: The same object appears in both turns but in a different state (e.g., heating up vs. boiling).
-- sequential_task: Same task surface, a later step is shown in Turn 2 (e.g., sand → stain).
+- sequential_task: Same task surface, a later step is shown in Turn 2 (e.g., sand -> stain).
 - location: The whole scene/setting changes between turns.
 - object_in_view: Same scene; the camera or attention shifts to a different object within it.
 - absent_referent: An object present in Turn 1 is no longer in frame in Turn 2.
 - screen_content: Both turns show a screen/display whose content changed.
-- cross_session_reference: A `context_image` (pre-Turn-1 state) is provided and Turn 2 references it.
+- cross_session_reference: A `pre_turn_context_scene_description` (pre-Turn-1 state) is provided and Turn 2 references it.
 
 Three difficulty tiers:
-- easy: minimal cognitive load — single referent, clear scene contrast, target=current.
-- medium: moderate — clarify or distractor or moderate prior/current vocab overlap.
-- hard: high — abstain target, offscreen referent, high prior/current vocab overlap, or subtle scene contrast.
+- easy: minimal cognitive load - single referent, clear scene contrast, gold_label=current.
+- medium: moderate - clarify or distractor or moderate prior/current vocab overlap.
+- hard: high - abstain label, offscreen referent, high prior/current vocab overlap, or subtle scene contrast.
 
-OUTPUT FORMAT — emit ONLY a single JSON object, no preamble, no prose, no markdown fences. Do not write anything before or after the object. The rationale belongs inside the JSON.
+OUTPUT FORMAT - emit ONLY a single JSON object, no preamble, no prose, no markdown fences. Do not write anything before or after the object. The rationale belongs inside the JSON.
 
 Required shape:
-{"shift_type": "<one of the eight category names>", "difficulty_tier": "<easy|medium|hard>", "rationale": "<one-sentence justification>"}"""
+{"shift_type": "<one of the eight category names>", "difficulty": "<easy|medium|hard>", "rationale": "<one-sentence justification>"}"""
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*|\s*```", re.IGNORECASE)
@@ -107,19 +107,19 @@ def _extract_json_object(text: str) -> str | None:
     return None
 
 
-def _build_judge_user_prompt(scenario: dict) -> str:
-    gold = scenario.get("gold") or {}
+def _build_judge_user_prompt(task: dict) -> str:
+    reference_answers = task.get("reference_answers") or {}
     parts = [
-        f"scenario_id: {scenario['scenario_id']}",
-        f"context_image: {scenario.get('context_image') or '(none)'}",
-        f"turn_1_image: {scenario.get('turn_1_image') or ''}",
-        f"turn_1_user: {scenario.get('turn_1_user') or ''}",
-        f"turn_2_image: {scenario.get('turn_2_image') or ''}",
-        f"turn_2_user: {scenario.get('turn_2_user') or ''}",
-        f"gold.current_answers: {gold.get('current_answers') or []}",
-        f"gold.prior_answers: {gold.get('prior_answers') or []}",
-        f"gold.clarify_indicators: {gold.get('clarify_indicators') or []}",
-        f"gold.abstain_indicators: {gold.get('abstain_indicators') or []}",
+        f"task_id: {task['task_id']}",
+        f"pre_turn_context_scene_description: {task.get('pre_turn_context_scene_description') or '(none)'}",
+        f"turn_1_scene_description: {task.get('turn_1_scene_description') or ''}",
+        f"turn_1_user: {task.get('turn_1_user') or ''}",
+        f"turn_2_scene_description: {task.get('turn_2_scene_description') or ''}",
+        f"turn_2_user: {task.get('turn_2_user') or ''}",
+        f"reference_answers.current_answers: {reference_answers.get('current_answers') or []}",
+        f"reference_answers.prior_answers: {reference_answers.get('prior_answers') or []}",
+        f"reference_answers.clarify_indicators: {reference_answers.get('clarify_indicators') or []}",
+        f"reference_answers.abstain_indicators: {reference_answers.get('abstain_indicators') or []}",
     ]
     return "\n".join(parts)
 
@@ -128,14 +128,14 @@ def _parse_judge_response(raw: str) -> dict[str, str]:
     """Pull the trailing JSON object out of the judge response."""
     chunk = _extract_json_object(raw or "")
     if not chunk:
-        return {"shift_type": "", "difficulty_tier": "", "rationale": "PARSE_ERROR"}
+        return {"shift_type": "", "difficulty": "", "rationale": "PARSE_ERROR"}
     try:
         obj = json.loads(chunk)
     except json.JSONDecodeError:
-        return {"shift_type": "", "difficulty_tier": "", "rationale": "PARSE_ERROR"}
+        return {"shift_type": "", "difficulty": "", "rationale": "PARSE_ERROR"}
     return {
         "shift_type": str(obj.get("shift_type", "")).strip(),
-        "difficulty_tier": str(obj.get("difficulty_tier", "")).strip(),
+        "difficulty": str(obj.get("difficulty", "")).strip(),
         "rationale": str(obj.get("rationale", "")).strip(),
     }
 
@@ -146,7 +146,7 @@ def _make_judge_adapter(model_id: str) -> Any:
     Family is inferred from the model id prefix so users can pass
     `gemini/...`, `openai/...`, or `openrouter/anthropic/...` and have
     LiteLLM route accordingly. Bumps max_tokens above the runtime
-    judge's default — Gemini 2.5 Flash in particular needs headroom or
+    judge's default - Gemini 2.5 Flash in particular needs headroom or
     the JSON gets truncated mid-rationale.
     """
     from wearable_assistant_context_bench.llm_judge import LiteLLMJudgeAdapter
@@ -156,8 +156,8 @@ def _make_judge_adapter(model_id: str) -> Any:
     return LiteLLMJudgeAdapter(family=family, max_tokens=2048)
 
 
-def _call_judge(adapter: Any, scenario: dict, model_id: str) -> dict[str, str]:
-    user = _build_judge_user_prompt(scenario)
+def _call_judge(adapter: Any, task: dict, model_id: str) -> dict[str, str]:
+    user = _build_judge_user_prompt(task)
     raw = adapter.call(
         system=_AUDIT_JUDGE_SYSTEM_PROMPT,
         user=user,
@@ -183,19 +183,19 @@ def _load_jsonl(path: Path) -> list[dict]:
 # --- audit pipeline ------------------------------------------------------
 
 
-def _audit_one(scenario: dict) -> dict[str, Any]:
-    """Run the rule-based audit on a single scenario."""
-    audit_ct, ct_signals = audit_shift_type(scenario)
-    audit_tc = audit_target_context(scenario.get("gold") or {}, scenario.get("turn_2_user") or "")
+def _audit_one(task: dict) -> dict[str, Any]:
+    """Run the rule-based audit on a single task."""
+    audit_ct, ct_signals = audit_shift_type(task)
+    audit_tc = audit_gold_label(task.get("reference_answers") or {}, task.get("turn_2_user") or "")
     audit_diff, diff_score, diff_breakdown = audit_difficulty(
-        scenario,
-        target_context=audit_tc,
+        task,
+        gold_label=audit_tc,
         shift_type=audit_ct,
     )
-    metadata_ct = scenario.get("shift_type")
-    metadata_diff = scenario.get("difficulty_tier")
+    metadata_ct = task.get("shift_type")
+    metadata_diff = task.get("difficulty")
     return {
-        "scenario_id": scenario["scenario_id"],
+        "task_id": task["task_id"],
         "metadata_shift_type": metadata_ct,
         "audit_shift_type": audit_ct,
         "shift_type_match": str(metadata_ct == audit_ct),
@@ -205,9 +205,9 @@ def _audit_one(scenario: dict) -> dict[str, Any]:
         "audit_signals_shift_type": json.dumps(ct_signals, ensure_ascii=False),
         "audit_difficulty_score": diff_score,
         "audit_difficulty_breakdown": json.dumps(diff_breakdown, ensure_ascii=False),
-        "audit_target_context_inferred": audit_tc,
-        "metadata_target_context": scenario.get("target_context"),
-        "metadata_referent_complexity": scenario.get("referent_complexity"),
+        "audit_gold_label_inferred": audit_tc,
+        "metadata_gold_label": task.get("gold_label"),
+        "metadata_referent_complexity": task.get("referent_complexity"),
         "llm_shift_type": "",
         "llm_difficulty": "",
         "llm_rationale": "",
@@ -222,7 +222,7 @@ def _disagreement(row: dict[str, Any]) -> bool:
 def _shift_type_disagreement(row: dict[str, Any]) -> bool:
     """Only shift_type disagreements get the LLM-judge spot-check.
 
-    Difficulty disagreements are expected by design — the rule-based
+    Difficulty disagreements are expected by design - the rule-based
     rubric defines its own additive scoring, which won't reproduce the
     human-graded distribution exactly. Difficulty is for direct
     reviewer inspection, not LLM tie-breaking.
@@ -237,14 +237,14 @@ def _summarize(rows: list[dict[str, Any]]) -> str:
     any_mismatch = sum(1 for r in rows if _disagreement(r))
 
     out = [
-        f"Audited {n} scenarios.",
+        f"Audited {n} tasks.",
         f"  shift_type mismatches: {ct_mismatch} ({ct_mismatch / n:.0%})",
         f"  difficulty   mismatches: {diff_mismatch} ({diff_mismatch / n:.0%})",
         f"  any mismatch: {any_mismatch} ({any_mismatch / n:.0%})",
     ]
 
     # Per-shift_type mismatch rate (using metadata as the grouping key
-    # so the table reads like "of the X scenarios labeled object_state,
+    # so the table reads like "of the X tasks labeled object_state,
     # the audit disagreed on Y").
     per_ct: dict[str, list[int]] = {}
     for r in rows:
@@ -276,7 +276,7 @@ def main() -> int:
         dest="input_path",
         type=Path,
         default=DEFAULT_INPUT,
-        help=f"Path to wacb.jsonl (default: {DEFAULT_INPUT.relative_to(REPO_ROOT)})",
+        help=f"Path to tasks.jsonl (default: {DEFAULT_INPUT.relative_to(REPO_ROOT)})",
     )
     parser.add_argument(
         "--out",
@@ -304,8 +304,8 @@ def main() -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    scenarios = _load_jsonl(args.input_path)
-    rows = [_audit_one(s) for s in scenarios]
+    tasks = _load_jsonl(args.input_path)
+    rows = [_audit_one(s) for s in tasks]
 
     if args.judge_on_disagreement:
         disagreements = [r for r in rows if _shift_type_disagreement(r)]
@@ -322,20 +322,20 @@ def main() -> int:
         else:
             _logger.info("Running LLM-judge spot-check on %d disagreements...", n_dis)
             adapter = _make_judge_adapter(args.judge_model)
-            scenario_by_id = {s["scenario_id"]: s for s in scenarios}
-            row_by_id = {r["scenario_id"]: r for r in rows}
+            task_by_id = {s["task_id"]: s for s in tasks}
+            row_by_id = {r["task_id"]: r for r in rows}
             for i, row in enumerate(disagreements, 1):
-                sid = row["scenario_id"]
+                sid = row["task_id"]
                 try:
-                    verdict = _call_judge(adapter, scenario_by_id[sid], args.judge_model)
+                    verdict = _call_judge(adapter, task_by_id[sid], args.judge_model)
                 except Exception as exc:  # surface the failure but keep going
                     verdict = {
                         "shift_type": "",
-                        "difficulty_tier": "",
+                        "difficulty": "",
                         "rationale": f"JUDGE_ERROR: {type(exc).__name__}: {exc}",
                     }
                 row_by_id[sid]["llm_shift_type"] = verdict["shift_type"]
-                row_by_id[sid]["llm_difficulty"] = verdict["difficulty_tier"]
+                row_by_id[sid]["llm_difficulty"] = verdict["difficulty"]
                 row_by_id[sid]["llm_rationale"] = verdict["rationale"]
                 if i % 5 == 0:
                     _logger.info("  judged %d/%d", i, n_dis)

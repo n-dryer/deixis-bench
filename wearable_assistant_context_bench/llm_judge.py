@@ -52,13 +52,13 @@ ambiguous.
 - `abstain`: decline because the available evidence is insufficient.
 
 You will be given:
-1. A brief description of the scenario and the state shift that \
+1. A brief description of the task and the state shift that \
 occurred between Turn 1 and Turn 2.
 2. The Turn 2 user message.
 3. The assistant's Turn 2 response being labeled.
-4. Four reference answer lists for the scenario (CURRENT, PRIOR, \
+4. Four reference answer lists for the task (CURRENT, PRIOR, \
 CLARIFY indicators, ABSTAIN indicators). These are provided so you can \
-see which concrete tokens anchor each label for this scenario. They \
+see which concrete tokens anchor each label for this task. They \
 are not a scoring shortcut: a response can match tokens from one list \
 and still be better described by another label.
 
@@ -246,7 +246,7 @@ class LLMJudge:
     def label(
         self,
         response: str,
-        scenario_description: str,
+        task_description: str,
         turn_2_user: str,
         current_answers: list[str],
         prior_answers: list[str],
@@ -261,12 +261,12 @@ class LLMJudge:
                 the actual T1 vs. T2 situation, including the names of
                 objects in frame. The judge uses this to determine
                 whether the response reflects T2 (current) or T1 (prior)
-                context. The candidate model never sees this — only the
+                context. The candidate model never sees this - only the
                 judge does.
         """
         user_message = _build_user_prompt(
             response=response,
-            scenario_description=scenario_description,
+            task_description=task_description,
             turn_2_user=turn_2_user,
             current_answers=current_answers,
             prior_answers=prior_answers,
@@ -292,7 +292,7 @@ def infer_candidate_family(model_id: str) -> str | None:
 
     Open-weights families served via Inference Providers (Llama, Qwen,
     Mistral, DeepSeek, Gemma, etc.) are intentionally returned as
-    ``None`` — the cross-family judge map only covers Claude/Gemini/
+    ``None`` - the cross-family judge map only covers Claude/Gemini/
     OpenAI today, so HF candidates must pass ``--judge-family``
     explicitly. The runner surfaces a clear error in that case.
 
@@ -319,7 +319,7 @@ def infer_candidate_family(model_id: str) -> str | None:
             # huggingface/<inference_provider>/<hf_org>/<hf_model>.
             # Strip the inference-provider segment so we can detect a
             # closed-family model (e.g. huggingface/together/openai/
-            # gpt-oss-120b → openai). For open-weights candidates
+            # gpt-oss-120b -> openai). For open-weights candidates
             # (Llama, Qwen, Mistral, etc.), the recursion returns None
             # and the caller sees a "pass --judge-family explicitly"
             # error.
@@ -423,7 +423,7 @@ def build_judge(
 def _build_user_prompt(
     *,
     response: str,
-    scenario_description: str,
+    task_description: str,
     turn_2_user: str,
     current_answers: list[str],
     prior_answers: list[str],
@@ -449,7 +449,7 @@ def _build_user_prompt(
             f"GROUND TRUTH (judge-only, not visible to the candidate):\n{ground_truth_context}\n\n"
         )
     return (
-        f"SCENARIO (Turn 1 context and state shift):\n{scenario_description}\n\n"
+        f"TASK (Turn 1 context and state shift):\n{task_description}\n\n"
         f"{ground_truth_section}"
         f"TURN 2 USER MESSAGE:\n{turn_2_user}\n\n"
         f"RESPONSE TO LABEL:\n{response}\n\n"
@@ -483,7 +483,7 @@ def _strict_label_line(raw: str) -> str | None:
 
     Unlike the previous backwards-scan heuristic, this never flips on
     contrastive prose like *"the response uses prior context but I will
-    select current"* — the only signal it accepts is the judge naming
+    select current"* - the only signal it accepts is the judge naming
     the field by name.
     """
     if not raw:
@@ -519,7 +519,7 @@ def parse_verdict(raw: str) -> JudgeVerdict:
     if not (raw or "").strip():
         return JudgeVerdict(
             selected_label="abstain",
-            rationale=("(no-response fallback — candidate or judge returned empty)"),
+            rationale=("(no-response fallback - candidate or judge returned empty)"),
         )
 
     matches = list(_JSON_OBJECT_RE.finditer(raw))
@@ -560,5 +560,5 @@ def parse_verdict(raw: str) -> JudgeVerdict:
     )
     return JudgeVerdict(
         selected_label="abstain",
-        rationale="(no-verdict fallback — neither JSON nor selected_label line found)",
+        rationale="(no-verdict fallback - neither JSON nor selected_label line found)",
     )

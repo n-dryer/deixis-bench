@@ -1,7 +1,7 @@
 """End-to-end and integration tests for the runner.
 
 Covers the trial loop and CLI parsing, the ``[Camera: ...]`` injection
-format and ``context_image`` + judge ground-truth wiring, public-doc
+format and ``pre_turn_context_scene_description`` + judge ground-truth wiring, public-doc
 framing terms and forbidden vocabulary, and prompt-condition loading
 plus policy neutrality.
 """
@@ -20,14 +20,14 @@ from wearable_assistant_context_bench.llm_judge import _build_user_prompt
 from wearable_assistant_context_bench.models import ModelConfig
 from wearable_assistant_context_bench.prompt_conditions import (
     PromptCondition,
-    get_prompt_condition_by_name,
+    get_prompt_condition,
     load_prompt_conditions,
 )
 from wearable_assistant_context_bench.runner import (
     AnswerSet,
-    Scenario,
-    _build_context_image_message,
+    Task,
     _build_message,
+    _build_pre_turn_context_scene_description_message,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -54,22 +54,12 @@ class _StubJudge:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
 
-    def label(
-        self,
-        response: str,
-        scenario_description: str,
-        turn_2_user: str,
-        current_answers: list[str],
-        prior_answers: list[str],
-        clarify_indicators: list[str],
-        abstain_indicators: list[str],
-        ground_truth_context: str | None = None,
-    ) -> Any:
+    def label(self, **kwargs: Any) -> Any:
         self.calls.append(
             {
-                "response": response,
-                "turn_2_user": turn_2_user,
-                "ground_truth_context": ground_truth_context,
+                "response": kwargs.get("response"),
+                "turn_2_user": kwargs.get("turn_2_user"),
+                "ground_truth_context": kwargs.get("ground_truth_context"),
             }
         )
         from wearable_assistant_context_bench.llm_judge import JudgeVerdict
@@ -90,56 +80,44 @@ class _PassingJudge:
     family = "stub"
     model_id = "stub-model"
 
-    def label(
-        self,
-        response: str,
-        scenario_description: str,
-        turn_2_user: str,
-        current_answers: list[str],
-        prior_answers: list[str],
-        clarify_indicators: list[str],
-        abstain_indicators: list[str],
-        ground_truth_context: str | None = None,
-    ) -> Any:
+    def label(self, **kwargs: Any) -> Any:
         from wearable_assistant_context_bench.llm_judge import JudgeVerdict
 
         return JudgeVerdict(selected_label="current", rationale="stub")
 
 
-def _make_scenario(
+def _make_task(
     *,
-    scenario_id: str = "sc-test",
-    target_context: str = "current",
+    task_id: str = "task-test",
+    gold_label: str = "current",
     shift_type: str = "object_in_hand",
-    activity_domain: str = "workshop",
+    domain: str = "workshop",
     referent_complexity: str = "single_referent",
-    difficulty_tier: str = "easy",
-    turn_1_image: str | None = "Hand on a thin metal handle.",
+    difficulty: str = "easy",
+    turn_1_scene_description: str | None = "Hand on a thin metal handle.",
     turn_1_user: str = "How do I use this?",
-    turn_2_image: str | None = "Hand on a wooden grip with a heavy head.",
+    turn_2_scene_description: str | None = "Hand on a wooden grip with a heavy head.",
     turn_2_user: str = "What about now?",
-    turn_3_repair_prompt: str = "I mean the object I'm holding now.",
-    context_image: str | None = None,
-    subset: str = "main",
-    pair_id: str | None = None,
-    gold: AnswerSet | None = None,
-) -> Scenario:
-    return Scenario(
-        scenario_id=scenario_id,
-        target_context=target_context,
+    repair_prompt_named: str = "I mean the object I'm holding now.",
+    pre_turn_context_scene_description: str | None = None,
+    task_set: str = "main",
+    reference_answers: AnswerSet | None = None,
+) -> Task:
+    return Task(
+        task_id=task_id,
+        gold_label=gold_label,
         shift_type=shift_type,
-        activity_domain=activity_domain,
+        domain=domain,
         referent_complexity=referent_complexity,
-        difficulty_tier=difficulty_tier,
-        turn_1_image=turn_1_image or "",
+        difficulty=difficulty,
+        turn_1_scene_description=turn_1_scene_description or "",
         turn_1_user=turn_1_user,
-        turn_2_image=turn_2_image or "",
+        turn_2_scene_description=turn_2_scene_description or "",
         turn_2_user=turn_2_user,
-        turn_3_repair_prompt=turn_3_repair_prompt,
-        context_image=context_image,
-        subset=subset,
-        pair_id=pair_id,
-        gold=gold or AnswerSet(),
+        repair_prompt_named=repair_prompt_named,
+        pre_turn_context_scene_description=pre_turn_context_scene_description,
+        task_set=task_set,
+        reference_answers=reference_answers or AnswerSet(),
     )
 
 
@@ -158,9 +136,9 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
         config={"output_dir": str(output_dir)},
     )
 
-    scenario_count = len(run_module.load_scenarios(subset="main"))
+    task_count = len(run_module.load_tasks(task_set="main"))
     condition_count = len(run_module.load_prompt_conditions(run_module.PROMPT_CONDITIONS_PATH))
-    expected_trials = scenario_count * condition_count * run_module.CONFIG["trials_per_cell"]
+    expected_trials = task_count * condition_count * run_module.CONFIG["trials_per_cell"]
     assert len(results) == expected_trials
 
     transcript_path = output_dir / "transcripts.jsonl"
@@ -171,18 +149,17 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
     for line in lines:
         payload = json.loads(line)
         for required in (
-            "scenario_id",
-            "subset",
-            "pair_id",
+            "task_id",
+            "task_set",
             "condition",
             "trial",
-            "target_context",
+            "gold_label",
             "shift_type",
             "turn_1_user",
-            "turn_1_image",
+            "turn_1_scene_description",
             "turn_1_response",
             "turn_2_user",
-            "turn_2_image",
+            "turn_2_scene_description",
             "turn_2_response",
             "turn_2_code_signals",
             "turn_2_judge_label",
@@ -191,7 +168,7 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "turn_3_repair_passed",
         ):
             assert required in payload, f"missing {required} in transcript row"
-        assert payload["subset"] == "main"
+        assert payload["task_set"] == "main"
 
 
 def test_run_default_repair_disabled_records_no_repair_attempts(
@@ -279,10 +256,10 @@ def test_run_emits_summary_json(tmp_path: Path) -> None:
     payload = json.loads(summary_path.read_text(encoding="utf-8"))
     assert payload["run_label"] == "summary_run"
     assert payload["n_trials"] > 0
-    assert payload["n_scenarios"] > 0
+    assert payload["n_tasks"] > 0
     assert "primary_score_mean_recall" in payload
     assert "per_class_recall" in payload
-    assert "per_subset_recall" in payload
+    assert "per_task_set_recall" in payload
     assert "config_snapshot" in payload
     assert payload["config_snapshot"]["enable_repair"] is False
 
@@ -357,20 +334,16 @@ def test_config_overrides_from_args_full() -> None:
     }
 
 
-def test_parse_args_no_longer_exposes_subset_flag() -> None:
-    """The ``--subset`` CLI flag was removed when the contrast pack was
-    folded into the unified main set. Passing it should fail.
-    """
+def test_parse_args_no_longer_exposes_task_set_flag() -> None:
+    """The ``--task_set`` CLI flag is not part of the flat pre-release CLI."""
     with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "main"])
+        run_module._parse_args(["--task_set", "main"])
     with pytest.raises(SystemExit):
-        run_module._parse_args(["--subset", "contrast"])
+        run_module._parse_args(["--task_set", "paired"])
 
 
-def test_legacy_adv_ids_load_in_unified_main_set(tmp_path: Path) -> None:
-    """Scenarios with legacy ``adv-*`` ids are part of the unified main
-    set; the runner loads them alongside ``sc-*`` scenarios.
-    """
+def test_task_ids_use_final_task_prefix(tmp_path: Path) -> None:
+    """Committed tasks use the final ``task-###`` ID format."""
     adapter = _StubAdapter()
     judge = _StubJudge()
     output_dir = tmp_path / "unified"
@@ -379,16 +352,16 @@ def test_legacy_adv_ids_load_in_unified_main_set(tmp_path: Path) -> None:
         judge=judge,
         config={"output_dir": str(output_dir)},
     )
-    ids = {r["scenario_id"] for r in results}
-    assert any(sid.startswith("adv-") for sid in ids)
-    assert any(sid.startswith("sc-") for sid in ids)
+    ids = {r["task_id"] for r in results}
+    assert ids
+    assert all(sid.startswith("task-") for sid in ids)
     findings = (output_dir / "findings.md").read_text(encoding="utf-8")
     import re as _re
 
     match = _re.search(r"```json\n(.*?)\n```", findings, _re.DOTALL)
     assert match is not None
     payload = json.loads(match.group(1))
-    assert payload["subset"] == "main"
+    assert payload["task_set"] == "main"
 
 
 def test_manifest_records_run_metadata(tmp_path: Path) -> None:
@@ -408,7 +381,7 @@ def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     payload = json.loads(match.group(1))
     assert payload["camera_injection"] is True
     assert payload["enable_repair"] is False
-    assert payload["subset"] == "main"
+    assert payload["task_set"] == "main"
     assert "ranking_judge_model" in payload
     assert "ranking_judge_family" in payload
     assert payload["ranking_judge_model"] is None
@@ -448,7 +421,7 @@ def test_run_records_ranking_judge_fields_when_ranking_judge_provided(
         assert "turn_2_ranking_judge_label" in r
         assert r["turn_2_ranking_judge_label"] == "prior"
         assert r["turn_2_ranking_judge_rationale"] == "ranking-stub"
-        assert r["turn_2_ranking_passed"] == (r["target_context"] == "prior")
+        assert r["turn_2_ranking_passed"] == (r["gold_label"] == "prior")
     assert len(ranking_judge.calls) >= len(results)
     findings_body = (output_dir / "findings.md").read_text(encoding="utf-8")
     import re as _re
@@ -463,33 +436,33 @@ def test_run_records_ranking_judge_fields_when_ranking_judge_provided(
 
 
 def test_resolve_repair_anchor_named_default() -> None:
-    scenario = _make_scenario(
-        turn_3_repair_prompt="named anchor",
+    task = _make_task(
+        repair_prompt_named="named anchor",
     )
-    scenario.turn_3_repair_prompt_deictic = "deictic anchor"
-    text, style = run_module._resolve_repair_anchor(scenario, "named")
+    task.repair_prompt_deictic = "deictic anchor"
+    text, style = run_module._resolve_repair_anchor(task, "named")
     assert text == "named anchor"
     assert style == "named"
 
 
 def test_resolve_repair_anchor_deictic_when_populated() -> None:
-    scenario = _make_scenario(turn_3_repair_prompt="named anchor")
-    scenario.turn_3_repair_prompt_deictic = "deictic anchor"
-    text, style = run_module._resolve_repair_anchor(scenario, "deictic")
+    task = _make_task(repair_prompt_named="named anchor")
+    task.repair_prompt_deictic = "deictic anchor"
+    text, style = run_module._resolve_repair_anchor(task, "deictic")
     assert text == "deictic anchor"
     assert style == "deictic"
 
 
 def test_resolve_repair_anchor_deictic_falls_back_when_absent() -> None:
-    """absent_referent / cross_session_reference scenarios have no
+    """absent_referent / cross_session_reference tasks have no
     deictic anchor; the runner falls back to named."""
-    scenario = _make_scenario(
+    task = _make_task(
         shift_type="absent_referent",
-        target_context="prior",
-        turn_3_repair_prompt="named only",
+        gold_label="prior",
+        repair_prompt_named="named only",
     )
-    scenario.turn_3_repair_prompt_deictic = None
-    text, style = run_module._resolve_repair_anchor(scenario, "deictic")
+    task.repair_prompt_deictic = None
+    text, style = run_module._resolve_repair_anchor(task, "deictic")
     assert text == "named only"
     assert style == "named"
 
@@ -501,8 +474,8 @@ def test_parse_args_accepts_repair_style_flag() -> None:
     assert overrides == {"repair_style": "deictic"}
 
 
-def test_committed_main_subset_has_deictic_for_visible_current_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="main")
+def test_committed_main_task_set_has_deictic_for_visible_current_tasks() -> None:
+    tasks = run_module.load_tasks(task_set="main")
     visible = {
         "object_in_hand",
         "object_in_view",
@@ -512,22 +485,22 @@ def test_committed_main_subset_has_deictic_for_visible_current_scenarios() -> No
         "location",
     }
     missing = [
-        s.scenario_id
-        for s in scenarios
-        if s.target_context == "current"
+        s.task_id
+        for s in tasks
+        if s.gold_label == "current"
         and s.shift_type in visible
-        and not s.turn_3_repair_prompt_deictic
+        and not s.repair_prompt_deictic
     ]
     assert not missing
 
 
-def test_committed_main_subset_omits_deictic_for_non_visible_scenarios() -> None:
-    scenarios = run_module.load_scenarios(subset="main")
+def test_committed_main_task_set_omits_deictic_for_non_visible_tasks() -> None:
+    tasks = run_module.load_tasks(task_set="main")
     bad = [
-        s.scenario_id
-        for s in scenarios
+        s.task_id
+        for s in tasks
         if s.shift_type in {"absent_referent", "cross_session_reference"}
-        and s.turn_3_repair_prompt_deictic
+        and s.repair_prompt_deictic
     ]
     assert not bad
 
@@ -556,7 +529,7 @@ def test_load_runtime_config_reads_json_file() -> None:
     cfg = run_module.load_runtime_config()
     assert cfg["trials_per_cell"] == 1
     assert cfg["enable_repair"] is False
-    assert cfg["subset"] == "main"
+    assert cfg["task_set"] == "main"
 
 
 # ---------------------------------------------------------------------------
@@ -592,16 +565,16 @@ def test_camera_block_format_is_exact() -> None:
     assert msg["content"] == "[Camera: IMAGE TEXT]\nUSER TEXT"
 
 
-def test_context_image_message_is_user_only_camera_block() -> None:
-    msg = _build_context_image_message("A workbench with several tools laid out.")
+def test_pre_turn_context_scene_description_message_is_user_only_camera_block() -> None:
+    msg = _build_pre_turn_context_scene_description_message("A workbench with several tools laid out.")
     assert msg["role"] == "user"
     assert msg["content"] == "[Camera: A workbench with several tools laid out.]"
     assert "\n" not in msg["content"]
 
 
-def test_context_image_injected_as_separate_message_before_t1() -> None:
-    scenario = _make_scenario(
-        context_image="A long workbench with a vise on the left and several "
+def test_pre_turn_context_scene_description_injected_as_separate_message_before_t1() -> None:
+    task = _make_task(
+        pre_turn_context_scene_description="A long workbench with a vise on the left and several "
         "tools laid out on a pegboard above.",
     )
     answers = AnswerSet(
@@ -615,7 +588,7 @@ def test_context_image_injected_as_separate_message_before_t1() -> None:
     judge = _PassingJudge()
 
     run_module._run_one_trial(
-        scenario=scenario,
+        task=task,
         answers=answers,
         condition=condition,
         trial=0,
@@ -636,11 +609,11 @@ def test_context_image_injected_as_separate_message_before_t1() -> None:
     assert "\n" not in leading["content"]
     t1_user = turn_1_messages[1]
     assert t1_user["content"].startswith("[Camera: ")
-    assert t1_user["content"].endswith(scenario.turn_1_user)
+    assert t1_user["content"].endswith(task.turn_1_user)
 
 
-def test_no_context_image_message_when_field_is_null() -> None:
-    scenario = _make_scenario(context_image=None)
+def test_no_pre_turn_context_scene_description_message_when_field_is_null() -> None:
+    task = _make_task(pre_turn_context_scene_description=None)
     answers = AnswerSet(
         current_answers=["a", "b", "c"],
         prior_answers=[],
@@ -650,7 +623,7 @@ def test_no_context_image_message_when_field_is_null() -> None:
     condition = PromptCondition(name="test", description="d", system_prompt="sys", token_count=0)
     adapter = _CapturingAdapter()
     run_module._run_one_trial(
-        scenario=scenario,
+        task=task,
         answers=answers,
         condition=condition,
         trial=0,
@@ -664,9 +637,9 @@ def test_no_context_image_message_when_field_is_null() -> None:
 
 
 def test_t2_message_contains_camera_block_when_image_set() -> None:
-    scenario = _make_scenario(
-        turn_1_image="Hand on a slim cylindrical metal shaft.",
-        turn_2_image="Hand on a flat plastic grip with three colored buttons.",
+    task = _make_task(
+        turn_1_scene_description="Hand on a slim cylindrical metal shaft.",
+        turn_2_scene_description="Hand on a flat plastic grip with three colored buttons.",
     )
     answers = AnswerSet(
         current_answers=["a", "b", "c"],
@@ -677,7 +650,7 @@ def test_t2_message_contains_camera_block_when_image_set() -> None:
     condition = PromptCondition(name="test", description="d", system_prompt="sys", token_count=0)
     adapter = _CapturingAdapter()
     run_module._run_one_trial(
-        scenario=scenario,
+        task=task,
         answers=answers,
         condition=condition,
         trial=0,
@@ -690,13 +663,13 @@ def test_t2_message_contains_camera_block_when_image_set() -> None:
     assert last["role"] == "user"
     assert last["content"].startswith("[Camera: ")
     assert "Hand on a flat plastic grip" in last["content"]
-    assert last["content"].endswith(scenario.turn_2_user)
+    assert last["content"].endswith(task.turn_2_user)
 
 
 def test_judge_receives_ground_truth_context() -> None:
     prompt = _build_user_prompt(
         response="The hammer should hit straight.",
-        scenario_description="Object swap; target current.",
+        task_description="Object swap; target current.",
         turn_2_user="Am I doing this right?",
         current_answers=["hammer", "swing"],
         prior_answers=["screwdriver"],
@@ -715,7 +688,7 @@ def test_judge_receives_ground_truth_context() -> None:
 def test_judge_omits_ground_truth_section_when_not_provided() -> None:
     prompt = _build_user_prompt(
         response="The hammer should hit straight.",
-        scenario_description="Object swap.",
+        task_description="Object swap.",
         turn_2_user="Am I doing this right?",
         current_answers=["hammer"],
         prior_answers=["screwdriver"],
@@ -726,9 +699,9 @@ def test_judge_omits_ground_truth_section_when_not_provided() -> None:
 
 
 def test_runner_passes_ground_truth_to_judge() -> None:
-    scenario = _make_scenario(
-        turn_1_image="Hand on a slim metal shaft with a phillips tip.",
-        turn_2_image="Hand wrapped around a wooden handle with a heavy steel head.",
+    task = _make_task(
+        turn_1_scene_description="Hand on a slim metal shaft with a phillips tip.",
+        turn_2_scene_description="Hand wrapped around a wooden handle with a heavy steel head.",
     )
     answers = AnswerSet(
         current_answers=["a", "b", "c"],
@@ -752,7 +725,7 @@ def test_runner_passes_ground_truth_to_judge() -> None:
     condition = PromptCondition(name="test", description="d", system_prompt="sys", token_count=0)
     adapter = _CapturingAdapter()
     run_module._run_one_trial(
-        scenario=scenario,
+        task=task,
         answers=answers,
         condition=condition,
         trial=0,
@@ -765,8 +738,8 @@ def test_runner_passes_ground_truth_to_judge() -> None:
     assert isinstance(gt, str) and gt
     assert "Turn 1 camera state" in gt
     assert "Turn 2 camera state" in gt
-    assert scenario.turn_1_image in gt
-    assert scenario.turn_2_image in gt
+    assert task.turn_1_scene_description in gt
+    assert task.turn_2_scene_description in gt
 
 
 # ---------------------------------------------------------------------------
@@ -786,13 +759,13 @@ def test_load_prompt_conditions_from_valid_fixture(prompt_conditions_sample_path
     conditions = load_prompt_conditions(prompt_conditions_sample_path)
     assert len(conditions) == 3
     names = [c.name for c in conditions]
-    assert names == ["baseline", "condition_a", "condition_b"]
+    assert names == ["baseline", "context_selection_instruction", "pre_answer_context_scaffold"]
     assert all(isinstance(c, PromptCondition) for c in conditions)
     assert all(c.system_prompt for c in conditions)
     assert all(c.token_count > 0 for c in conditions)
 
 
-def test_prompt_condition_aliases_match_existing_loader(
+def test_prompt_context_selection_instructionliases_match_existing_loader(
     prompt_conditions_sample_path: Path,
 ) -> None:
     prompt_conditions = load_prompt_conditions(prompt_conditions_sample_path)
@@ -808,38 +781,38 @@ def test_load_prompt_conditions_raises_on_malformed_json(tmp_path: Path) -> None
         load_prompt_conditions(bad)
 
 
-def test_get_prompt_condition_by_name_returns_condition_a(
+def test_get_prompt_condition_returns_context_selection_instruction(
     prompt_conditions_sample_path: Path,
 ) -> None:
     conditions = load_prompt_conditions(prompt_conditions_sample_path)
-    condition = get_prompt_condition_by_name(conditions, "condition_a")
-    assert condition.name == "condition_a"
+    condition = get_prompt_condition(conditions, "context_selection_instruction")
+    assert condition.name == "context_selection_instruction"
     assert "visual context" in condition.system_prompt.lower()
 
 
-def test_get_prompt_condition_by_name_returns_condition_b(
+def test_get_prompt_condition_returns_pre_answer_context_scaffold(
     prompt_conditions_sample_path: Path,
 ) -> None:
     conditions = load_prompt_conditions(prompt_conditions_sample_path)
-    condition = get_prompt_condition_by_name(conditions, "condition_b")
-    assert condition.name == "condition_b"
+    condition = get_prompt_condition(conditions, "pre_answer_context_scaffold")
+    assert condition.name == "pre_answer_context_scaffold"
     assert "relevant context" in condition.system_prompt.lower()
 
 
-def test_get_prompt_condition_by_name_raises_on_unknown(
+def test_get_prompt_condition_raises_on_unknown(
     prompt_conditions_sample_path: Path,
 ) -> None:
     conditions = load_prompt_conditions(prompt_conditions_sample_path)
     with pytest.raises(ValueError):
-        get_prompt_condition_by_name(conditions, "does_not_exist")
+        get_prompt_condition(conditions, "does_not_exist")
 
 
 def test_project_prompt_conditions_json_loads_three_conditions() -> None:
     conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     assert [c.name for c in conditions] == [
         "baseline",
-        "condition_a",
-        "condition_b",
+        "context_selection_instruction",
+        "pre_answer_context_scaffold",
     ]
 
 
@@ -847,8 +820,8 @@ def test_project_prompt_conditions_baseline_matches_expected_text() -> None:
     conditions = load_prompt_conditions(PROJECT_PROMPT_CONDITIONS)
     by_name = {c.name: c.system_prompt for c in conditions}
     assert by_name["baseline"] == EXPECTED_BASELINE
-    assert EXPECTED_CONDITION_A_FRAGMENT in by_name["condition_a"].lower()
-    assert EXPECTED_CONDITION_B_FRAGMENT in by_name["condition_b"]
+    assert EXPECTED_CONDITION_A_FRAGMENT in by_name["context_selection_instruction"].lower()
+    assert EXPECTED_CONDITION_B_FRAGMENT in by_name["pre_answer_context_scaffold"]
 
 
 def test_prompt_conditions_are_policy_neutral() -> None:
@@ -917,9 +890,9 @@ def test_public_docs_avoid_legacy_reference_state_language() -> None:
             assert term not in lowered, f"{path} still contains {term!r}"
 
 
-def test_public_docs_avoid_legacy_pack_name() -> None:
-    """The legacy `adversarial` and `hard` --pack values are no longer accepted."""
-    legacy = ("adversarial pack", "scenarios_adversarial.json")
+def test_public_docs_avoid_legacy_task_set_files() -> None:
+    """The legacy difficult/hard task-set files are no longer accepted."""
+    legacy = ("difficult pack", "tasks_difficult.json")
     for path in ("README.md", "docs/benchmark_spec.md"):
         lowered = _read(path).lower()
         for term in legacy:
@@ -955,7 +928,7 @@ def test_runtime_data_is_available_as_package_resources() -> None:
     the source-of-truth files byte-for-byte.
     """
     resource_root = files("wearable_assistant_context_bench").joinpath("data")
-    for name in ("config.json", "prompt_conditions.json", "wacb.jsonl"):
+    for name in ("config.json", "prompt_conditions.json", "tasks.jsonl"):
         packaged = resource_root.joinpath(name)
         source = REPO_ROOT / "data" / name
         assert packaged.is_file(), f"missing packaged runtime data: {name}"

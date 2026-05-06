@@ -201,8 +201,8 @@ class GeminiAdapter:
                     continue
                 raise
         else:
-            # All 3 attempts timed out — return empty string so the runner
-            # can continue with other scenarios rather than crashing.
+            # All 3 attempts timed out - return empty string so the runner
+            # can continue with other tasks rather than crashing.
             import warnings
             warnings.warn(
                 f"GeminiAdapter.query timed out after 3 attempts: {last_exc}",

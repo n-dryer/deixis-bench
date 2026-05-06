@@ -2,8 +2,8 @@
 
 The benchmark stores its three prompt conditions in
 ``data/prompt_conditions.json``. Each condition is a system prompt
-applied uniformly to every scenario in a run; the runner iterates over
-all conditions per scenario.
+applied uniformly to every task in a run; the runner iterates over
+all conditions per task.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ from pathlib import Path
 
 @dataclass
 class PromptCondition:
-    """A single prompt condition applied to every scenario.
+    """A single prompt condition applied to every task.
 
     Attributes:
-        name: Short identifier such as ``baseline`` or ``condition_a``.
+        name: Short identifier such as ``baseline`` or ``context_selection_instruction``.
         description: One-line summary of the prompt strategy.
         system_prompt: Full system prompt sent to the candidate model.
         token_count: Approximate prompt length used for prompt-overhead reporting.
@@ -54,7 +54,7 @@ def load_prompt_conditions(path: Path | Traversable) -> list[PromptCondition]:
     return conditions
 
 
-def get_prompt_condition_by_name(
+def get_prompt_condition(
     conditions: list[PromptCondition], name: str
 ) -> PromptCondition:
     """Return the prompt condition with the given name."""

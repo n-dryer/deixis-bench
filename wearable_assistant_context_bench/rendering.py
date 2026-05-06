@@ -3,29 +3,25 @@
 :func:`render_findings_markdown` consumes per-trial result dicts plus
 the metric helpers in
 :mod:`wearable_assistant_context_bench.aggregation` and emits the
-``findings.md`` body in 11 sections:
+``findings.md`` body in 10 sections:
 
 1. **Benchmark summary.** Headline primary score (mean of per-class
    recall under the default comparison condition), per-class recall
    for ``current`` and ``prior``, and a per-condition sensitivity row.
-2. **Per-pack recall.** Mean recall sliced by pack (``main`` /
-   ``contrast``).
+2. **Per task-set recall.** Mean recall sliced by task set.
 3. **Per shift-type recall.** Mean recall sliced by ``shift_type``.
-4. **Contrast pair consistency.** Percentage of A/B pairs in the
-   contrast pack where both variants pass. Reported only when
-   ``pair_id`` metadata is present.
-5. **Per-class pass rate by condition.** A 4-row internal grid for
+4. **Per-class pass rate by condition.** A 4-row internal grid for
    visibility. ``current`` and ``prior`` are the primary classes.
    ``clarify`` and ``abstain`` are auxiliary diagnostic classes and
    are not included in the primary score.
-6. **Simulated repair rate per condition** (only when ``--enable-repair``
+5. **Simulated repair rate per condition** (only when ``--enable-repair``
    was set).
-7. **Hedging behavior.** Clarification rate, abstention rate, and the
+6. **Hedging behavior.** Clarification rate, abstention rate, and the
    coverage metric ``1 - (clarify_rate + abstain_rate)``.
-8. **Code-judge disagreement count per scenario.**
-9. **Inter-judge agreement (cross-LLM).**
-10. **Scenario-by-condition matrix.**
-11. **Reproducibility manifest.** A JSON block with the scenario /
+7. **Code-judge disagreement count per task.**
+8. **Inter-judge agreement (cross-LLM).**
+9. **Task-by-condition matrix.**
+10. **Reproducibility manifest.** A JSON block with the task /
     prompt-conditions / judge-prompt SHAs, model strings, trials,
     temperature, and the default comparison condition.
 """
@@ -48,26 +44,25 @@ from wearable_assistant_context_bench.aggregation import (
     abstain_rate,
     clarify_rate,
     class_recall_with_ci_under_condition,
-    code_judge_disagreement_by_scenario,
-    contrast_pair_consistency,
+    code_judge_disagreement_by_task,
     coverage_rate,
     inter_judge_agreement_summary,
-    inter_judge_disagreement_by_scenario,
+    inter_judge_disagreement_by_task,
     mean_recall_with_bootstrap_ci_under_condition,
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
     recall_by_shift_type,
-    recall_by_subset,
-    scenario_by_condition_matrix,
+    recall_by_task_set,
     simulated_repair_rate_by_condition,
     sorted_conditions,
+    task_by_condition_matrix,
     wilson_interval,
 )
 
 
 def render_findings_markdown(
     results: list[dict],
-    scenario_policies: dict[str, str] | None = None,
+    task_policies: dict[str, str] | None = None,
     manifest: dict[str, Any] | None = None,
     ranking_condition: str = DEFAULT_RANKING_CONDITION,
 ) -> str:
@@ -75,8 +70,8 @@ def render_findings_markdown(
 
     Args:
         results: Per-trial result dicts.
-        scenario_policies: Optional scenario_id -> target_context
-            mapping. When provided, scenarios are ordered by this
+        task_policies: Optional task_id -> gold_label
+            mapping. When provided, tasks are ordered by this
             map's iteration order.
         manifest: Reproducibility manifest dict. Every required key in
             `REQUIRED_MANIFEST_KEYS` should be present; missing keys
@@ -85,18 +80,18 @@ def render_findings_markdown(
 
     Returns:
         A Markdown string including the benchmark-summary section,
-        per-pack and per-shift-type breakdowns, contrast pair
-        consistency, the per-policy pass-rate grid, the scenario
-        matrix, hedging behavior, and a reproducibility manifest block.
+        per-task-set and per-shift-type breakdowns, the per-policy
+        pass-rate grid, the task matrix, hedging behavior, and a
+        reproducibility manifest block.
     """
     grid = per_policy_pass_rate_by_condition(results)
     repair = simulated_repair_rate_by_condition(results)
-    disagreements = code_judge_disagreement_by_scenario(results)
-    matrix = scenario_by_condition_matrix(results)
+    disagreements = code_judge_disagreement_by_task(results)
+    matrix = task_by_condition_matrix(results)
     conditions = sorted_conditions(results)
     inter_judge_summary = inter_judge_agreement_summary(results)
     inter_judge_disagreements = (
-        inter_judge_disagreement_by_scenario(results) if inter_judge_summary is not None else {}
+        inter_judge_disagreement_by_task(results) if inter_judge_summary is not None else {}
     )
 
     primary_score_ci = mean_recall_with_ci_under_condition(results, ranking_condition)
@@ -108,9 +103,8 @@ def render_findings_markdown(
         condition: mean_recall_with_ci_under_condition(results, condition)
         for condition in conditions
     }
-    per_subset_recall_ci = recall_by_subset(results, ranking_condition)
+    per_task_set_recall_ci = recall_by_task_set(results, ranking_condition)
     per_shift_type_recall_ci = recall_by_shift_type(results, ranking_condition)
-    pair_consistency = contrast_pair_consistency(results, ranking_condition)
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
     coverage_ci = coverage_rate(results, ranking_condition)
@@ -132,17 +126,13 @@ def render_findings_markdown(
             per_condition_recall_ci=per_condition_recall_ci,
         ),
         "",
-        "## Per-subset recall",
+        "## Per task-set recall",
         "",
-        _render_per_subset_table(per_subset_recall_ci),
+        _render_per_task_set_table(per_task_set_recall_ci),
         "",
         "## Per shift-type recall",
         "",
         _render_per_shift_type_table(per_shift_type_recall_ci),
-        "",
-        "## Contrast pair consistency",
-        "",
-        _render_pair_consistency(pair_consistency),
         "",
         "## Per-class pass rate by condition",
         "",
@@ -164,7 +154,7 @@ def render_findings_markdown(
             "",
             _render_hedging_section(clarify_ci, abstain_ci, coverage_ci),
             "",
-            "## Code-judge disagreement by scenario",
+            "## Code-judge disagreement by task",
             "",
             _render_disagreement_list(disagreements),
             "",
@@ -172,9 +162,9 @@ def render_findings_markdown(
             "",
             _render_inter_judge_section(inter_judge_summary, inter_judge_disagreements),
             "",
-            "## Scenario-by-condition matrix",
+            "## Task-by-condition matrix",
             "",
-            _render_scenario_matrix(matrix, conditions, scenario_policies),
+            _render_task_matrix(matrix, conditions, task_policies),
             "",
             "## Reproducibility manifest",
             "",
@@ -203,13 +193,13 @@ def _render_benchmark_summary(
         if triple is None:
             return "n/a"
         rate, lo, hi = triple
-        return f"{_pct(rate)} (95% CI {_pct(lo)}–{_pct(hi)})"
+        return f"{_pct(rate)} (95% CI {_pct(lo)}-{_pct(hi)})"
 
     lines: list[str] = [
         f"- **Benchmark**: {benchmark_label}",
         f"- **Default comparison condition**: `{ranking_condition}`",
         (
-            "- **Primary score** — `mean(current_recall, prior_recall)` "
+            "- **Primary score** - `mean(current_recall, prior_recall)` "
             "(class recall, not overall accuracy): "
             f"**{_ci(primary_score_ci)}**"
         ),
@@ -237,21 +227,21 @@ def _render_benchmark_summary(
     return "\n".join(lines)
 
 
-def _render_per_subset_table(
-    per_pack: dict[str, tuple[float, float, float] | None],
+def _render_per_task_set_table(
+    per_task_set: dict[str, tuple[float, float, float] | None],
 ) -> str:
-    if not per_pack:
+    if not per_task_set:
         return "_No trials recorded._"
 
     def _ci(triple: tuple[float, float, float] | None) -> str:
         if triple is None:
             return "n/a"
         rate, lo, hi = triple
-        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
+        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%-{hi * 100:.1f}%)"
 
-    rows = ["| Subset | Mean recall (95% CI) |", "| --- | --- |"]
-    for pack in sorted(per_pack.keys()):
-        rows.append(f"| `{pack}` | {_ci(per_pack[pack])} |")
+    rows = ["| Task set | Mean recall (95% CI) |", "| --- | --- |"]
+    for task_set_value in sorted(per_task_set.keys()):
+        rows.append(f"| `{task_set_value}` | {_ci(per_task_set[task_set_value])} |")
     return "\n".join(rows)
 
 
@@ -265,30 +255,12 @@ def _render_per_shift_type_table(
         if triple is None:
             return "n/a"
         rate, lo, hi = triple
-        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
+        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%-{hi * 100:.1f}%)"
 
     rows = ["| Shift type | Pass rate (95% CI) |", "| --- | --- |"]
     for shift_type in sorted(per_shift_type.keys()):
         rows.append(f"| `{shift_type}` | {_ci(per_shift_type[shift_type])} |")
     return "\n".join(rows)
-
-
-def _render_pair_consistency(payload: dict[str, Any]) -> str:
-    if payload.get("pairs_evaluated", 0) == 0:
-        note = payload.get("note") or "no pair_id metadata available"
-        return f"_{note}_"
-    rate = payload["consistency_rate"]
-    ci = payload.get("ci")
-    rate_pct = f"{rate * 100:.1f}%"
-    if ci is None:
-        ci_part = ""
-    else:
-        lo, hi = ci
-        ci_part = f" (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
-    return (
-        f"- **Pairs evaluated**: {payload['pairs_evaluated']}\n"
-        f"- **Both-correct rate**: {rate_pct}{ci_part}"
-    )
 
 
 def _render_hedging_section(
@@ -300,7 +272,7 @@ def _render_hedging_section(
         if triple is None:
             return "n/a"
         rate, lo, hi = triple
-        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%–{hi * 100:.1f}%)"
+        return f"{rate * 100:.1f}% (95% CI {lo * 100:.1f}%-{hi * 100:.1f}%)"
 
     lines = [
         f"- **Clarification rate**: {_ci(clarify)}",
@@ -309,7 +281,7 @@ def _render_hedging_section(
     ]
     if coverage is not None and coverage[0] < 0.6:
         lines.append(
-            "- _Coverage below 60% — model is hedging on a majority of "
+            "- _Coverage below 60% - model is hedging on a majority of "
             "trials. Compare against a less hedge-prone baseline._"
         )
     return "\n".join(lines)
@@ -345,7 +317,7 @@ def _render_policy_grid(
             else:
                 _, lo, hi = ci
                 cells.append(
-                    f"{pct:.1f}% [95% CI {lo * 100:.1f}–{hi * 100:.1f}] "
+                    f"{pct:.1f}% [95% CI {lo * 100:.1f}-{hi * 100:.1f}] "
                     f"({cell.passed}/{cell.total})"
                 )
         rows.append("| " + " | ".join(cells) + " |")
@@ -367,7 +339,7 @@ def _render_repair_table(repair: dict[str, RepairRateCell]) -> str:
         else:
             _, lo, hi = ci
             rows.append(
-                f"| {condition} | {pct:.1f}% [95% CI {lo * 100:.1f}–{hi * 100:.1f}] "
+                f"| {condition} | {pct:.1f}% [95% CI {lo * 100:.1f}-{hi * 100:.1f}] "
                 f"({cell.repaired} / {cell.failures}) |"
             )
     return "\n".join(rows)
@@ -377,9 +349,9 @@ def _render_disagreement_list(disagreements: dict[str, int]) -> str:
     if not disagreements:
         return "_No trials recorded._"
     lines: list[str] = []
-    for scenario_id in sorted(disagreements.keys()):
+    for task_id in sorted(disagreements.keys()):
         lines.append(
-            f"- {scenario_id}: {disagreements[scenario_id]} trial(s) with code/judge disagreement"
+            f"- {task_id}: {disagreements[task_id]} trial(s) with code/judge disagreement"
         )
     return "\n".join(lines)
 
@@ -411,41 +383,41 @@ def _render_inter_judge_section(
     else:
         lines.append(f"- **Cohen's kappa**: {kappa:.3f}")
     lines.append("")
-    lines.append("Per-scenario disagreement counts (where the two judges differ):")
+    lines.append("Per-task disagreement counts (where the two judges differ):")
     if not disagreements:
         lines.append("")
         lines.append("_No disagreements recorded._")
         return "\n".join(lines)
     lines.append("")
-    for scenario_id in sorted(disagreements.keys()):
+    for task_id in sorted(disagreements.keys()):
         lines.append(
-            f"- {scenario_id}: {disagreements[scenario_id]} trial(s) where "
+            f"- {task_id}: {disagreements[task_id]} trial(s) where "
             "primary and ranking judges disagreed"
         )
     return "\n".join(lines)
 
 
-def _render_scenario_matrix(
+def _render_task_matrix(
     matrix: dict[str, dict[str, list[dict]]],
     conditions: list[str],
-    scenario_policies: dict[str, str] | None,
+    task_policies: dict[str, str] | None,
 ) -> str:
-    header = "| Scenario | Target context | " + " | ".join(conditions) + " |"
+    header = "| Task | Target context | " + " | ".join(conditions) + " |"
     separator = "| --- | --- | " + " | ".join("---" for _ in conditions) + " |"
     rows = [header, separator]
 
-    if scenario_policies is not None:
-        scenario_order = list(scenario_policies.keys())
+    if task_policies is not None:
+        task_order = list(task_policies.keys())
     else:
-        scenario_order = sorted(matrix.keys())
+        task_order = sorted(matrix.keys())
 
-    for scenario_id in scenario_order:
-        if scenario_id not in matrix:
+    for task_id in task_order:
+        if task_id not in matrix:
             continue
-        target_context = scenario_policies[scenario_id] if scenario_policies else "?"
-        cells = [scenario_id, f"`{target_context}`"]
+        gold_label = task_policies[task_id] if task_policies else "?"
+        cells = [task_id, f"`{gold_label}`"]
         for condition in conditions:
-            trials = matrix[scenario_id].get(condition, [])
+            trials = matrix[task_id].get(condition, [])
             cells.append(_format_trial_outcomes(trials))
         rows.append("| " + " | ".join(cells) + " |")
     return "\n".join(rows)
@@ -463,9 +435,9 @@ def _format_trial_outcomes(trials: list[dict]) -> str:
             tokens.append("fail")
             continue
         if entry["turn_3_repair_passed"]:
-            tokens.append("fail→repair-pass")
+            tokens.append("fail->repair-pass")
         else:
-            tokens.append("fail→repair-fail")
+            tokens.append("fail->repair-fail")
     return ", ".join(tokens)
 
 

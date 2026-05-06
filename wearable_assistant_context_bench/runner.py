@@ -1,7 +1,7 @@
 """Runner for the Wearable Assistant Context Bench.
 
-Implements the cross-turn reference-resolution task over the scenario
-set. Each scenario is a 2-turn conversation; on Turn 2 the runner
+Implements the cross-turn reference-resolution task over the task
+set. Each task is a 2-turn conversation; on Turn 2 the runner
 labels the candidate's response with the LLM judge. When
 ``enable_repair`` is set, a Turn 2 failure triggers a templated Turn 3
 repair prompt and the response is labeled again. Per-trial transcripts
@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 try:
     from dotenv import load_dotenv as _load_dotenv
@@ -46,7 +46,6 @@ from wearable_assistant_context_bench.litellm_adapter import LiteLLMAdapter
 from wearable_assistant_context_bench.llm_judge import (
     JUDGE_SYSTEM_PROMPT,
     JudgeVerdict,
-    LLMJudge,
     build_judge,
     infer_candidate_family,
     resolve_judge_family,
@@ -60,6 +59,30 @@ from wearable_assistant_context_bench.rendering import render_findings_markdown
 from wearable_assistant_context_bench.scoring import score_response
 
 ResourcePath = Path | Traversable
+
+
+class JudgeLike(Protocol):
+    """Minimal interface required from benchmark judges."""
+
+    @property
+    def family(self) -> str: ...
+
+    @property
+    def model_id(self) -> str: ...
+
+    def label(
+        self,
+        *,
+        response: str,
+        task_description: str,
+        turn_2_user: str,
+        current_answers: list[str],
+        prior_answers: list[str],
+        clarify_indicators: list[str],
+        abstain_indicators: list[str],
+        ground_truth_context: str | None = None,
+    ) -> JudgeVerdict: ...
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DATA_DIR = REPO_ROOT / "data"
@@ -77,7 +100,7 @@ def _data_resource(filename: str) -> ResourcePath:
     return PACKAGED_DATA_DIR.joinpath(filename)
 
 
-SCENARIOS_PATH = _data_resource("wacb.jsonl")
+TASKS_PATH = _data_resource("tasks.jsonl")
 PROMPT_CONDITIONS_PATH = _data_resource("prompt_conditions.json")
 DEFAULT_CONFIG_PATH = _data_resource("config.json")
 
@@ -99,26 +122,26 @@ CONFIG: dict[str, Any] = {
     "temperature": 0.0,
     # Default to a single trial. Multiple trials are only meaningful at
     # non-zero temperature; when used, variance is reported via Wilson
-    # CIs over the trial outcomes per scenario/condition cell.
+    # CIs over the trial outcomes per task/condition cell.
     "trials_per_cell": 1,
     "output_dir": str(DEFAULT_OUTPUT_DIR),
     "ranking_condition": DEFAULT_RANKING_CONDITION,
     "no_camera": False,
-    # `named` uses scenario.turn_3_repair_prompt (floor metric:
+    # `named` uses task.repair_prompt_named (floor metric:
     # maximally specific user correction). `deictic` uses
-    # scenario.turn_3_repair_prompt_deictic when populated and falls
-    # back to named for scenarios where a deictic gesture cannot
+    # task.repair_prompt_deictic when populated and falls
+    # back to named for tasks where a deictic gesture cannot
     # resolve the reference (absent_referent, cross_session_reference,
-    # target_context != current).
+    # gold_label != current).
     "repair_style": "named",
     # Turn 3 repair is opt-in. When False (default), a Turn 2 failure
     # is recorded as-is with no repair attempt. When True, the runner
     # fires the templated repair anchor and labels the Turn 3 response.
     "enable_repair": False,
-    # Retained for forward-compat: every scenario records subset="main"
-    # in the unified 166-scenario set. The runner loads all scenarios
+    # Retained for forward-compat: every task records task_set="main"
+    # in the unified 166-task set. The runner loads all tasks
     # regardless of this value.
-    "subset": "main",
+    "task_set": "main",
 }
 
 
@@ -140,9 +163,9 @@ def load_runtime_config(path: ResourcePath | None = None) -> dict[str, Any]:
 
 @dataclass
 class AnswerSet:
-    """Per-scenario gold-answer lists.
+    """Per-task reference-answer lists.
 
-    Carried inline on the :class:`Scenario` dataclass via the ``gold``
+    Carried inline on the :class:`Task` dataclass via the ``reference_answers``
     field rather than loaded from a separate file.
     """
 
@@ -153,104 +176,101 @@ class AnswerSet:
 
 
 @dataclass
-class Scenario:
-    """One scenario record loaded from ``wacb.jsonl``.
+class Task:
+    """One task record loaded from ``tasks.jsonl``.
 
     JSON line schema (one object per line):
-        scenario_id: str
-        subset: str   # "main" or "contrast"
-        pair_id: str | None  # optional contrast-pair grouping key
-        target_context: str  # current | prior | clarify | abstain
+        task_id: str
+        task_set: str   # always "main" for the flat pre-release set
+        gold_label: str  # current | prior | clarify | abstain
         shift_type: str        # one of the eight shift_type values
-        activity_domain: str
+        domain: str
         referent_complexity: str
-        difficulty_tier: str  # easy | medium | hard
+        difficulty: str  # easy | medium | hard
         time_gap_bucket: str | None
-        context_image: str | None  # pre-T1 camera state, null when unused
-        turn_1_image: str          # camera description at T1
+        pre_turn_context_scene_description: str | None  # pre-T1 camera state, null when unused
+        turn_1_scene_description: str          # camera description at T1
         turn_1_user: str
-        turn_2_image: str          # camera description at T2
+        turn_2_scene_description: str          # camera description at T2
         turn_2_user: str
-        turn_3_repair_prompt: str  # named repair (floor metric)
-        turn_3_repair_prompt_deictic: str | None  # deictic-only repair
-            for visible-referent scenarios; None when a deictic gesture
+        repair_prompt_named: str  # named repair (floor metric)
+        repair_prompt_deictic: str | None  # deictic-only repair
+            for visible-referent tasks; None when a deictic gesture
             wouldn't resolve the reference (absent_referent,
-            cross_session_reference, target_context other than current)
+            cross_session_reference, gold_label other than current)
         notes: str  # optional
-        gold:
+        reference_answers:
             current_answers: list[str]
             prior_answers: list[str]
             clarify_indicators: list[str]
             abstain_indicators: list[str]
     """
 
-    scenario_id: str
-    target_context: str
+    task_id: str
+    gold_label: str
     shift_type: str
-    activity_domain: str
+    domain: str
     referent_complexity: str
-    difficulty_tier: str
-    turn_1_image: str
+    difficulty: str
+    turn_1_scene_description: str
     turn_1_user: str
-    turn_2_image: str
+    turn_2_scene_description: str
     turn_2_user: str
-    turn_3_repair_prompt: str
-    subset: str = "main"
-    pair_id: str | None = None
-    context_image: str | None = None
+    repair_prompt_named: str
+    task_set: str = "main"
+    pre_turn_context_scene_description: str | None = None
     time_gap_bucket: str | None = None
     notes: str = ""
-    turn_3_repair_prompt_deictic: str | None = None
-    gold: AnswerSet = field(default_factory=AnswerSet)
+    repair_prompt_deictic: str | None = None
+    reference_answers: AnswerSet = field(default_factory=AnswerSet)
 
 
-def load_scenarios(
-    path: ResourcePath = SCENARIOS_PATH, subset: str | None = None
-) -> list[Scenario]:
-    """Load scenarios from ``wacb.jsonl``, optionally filtered by subset.
+def load_tasks(
+    path: ResourcePath = TASKS_PATH, task_set: str | None = None
+) -> list[Task]:
+    """Load tasks from ``tasks.jsonl``, optionally filtered by task_set.
 
-    Each line is one JSON object. When ``subset`` is non-None, only
-    records whose ``subset`` field matches are returned.
+    Each line is one JSON object. When ``task_set`` is non-None, only
+    records whose ``task_set`` field matches are returned.
     """
-    scenarios: list[Scenario] = []
+    tasks: list[Task] = []
     with path.open("r", encoding="utf-8") as f:
         for raw_line in f:
             line = raw_line.strip()
             if not line:
                 continue
             entry = json.loads(line)
-            if subset is not None and entry.get("subset") != subset:
+            if task_set is not None and entry.get("task_set") != task_set:
                 continue
-            gold_raw = entry.get("gold") or {}
-            gold = AnswerSet(
-                current_answers=list(gold_raw.get("current_answers") or []),
-                prior_answers=list(gold_raw.get("prior_answers") or []),
-                clarify_indicators=list(gold_raw.get("clarify_indicators") or []),
-                abstain_indicators=list(gold_raw.get("abstain_indicators") or []),
+            reference_answers_raw = entry.get("reference_answers") or {}
+            reference_answers = AnswerSet(
+                current_answers=list(reference_answers_raw.get("current_answers") or []),
+                prior_answers=list(reference_answers_raw.get("prior_answers") or []),
+                clarify_indicators=list(reference_answers_raw.get("clarify_indicators") or []),
+                abstain_indicators=list(reference_answers_raw.get("abstain_indicators") or []),
             )
-            scenarios.append(
-                Scenario(
-                    scenario_id=entry["scenario_id"],
-                    subset=entry.get("subset", "main"),
-                    pair_id=entry.get("pair_id"),
-                    target_context=entry["target_context"],
+            tasks.append(
+                Task(
+                    task_id=entry["task_id"],
+                    task_set=entry.get("task_set", "main"),
+                    gold_label=entry["gold_label"],
                     shift_type=entry["shift_type"],
-                    activity_domain=entry["activity_domain"],
+                    domain=entry["domain"],
                     referent_complexity=entry["referent_complexity"],
-                    difficulty_tier=entry["difficulty_tier"],
-                    turn_1_image=entry["turn_1_image"],
+                    difficulty=entry["difficulty"],
+                    turn_1_scene_description=entry["turn_1_scene_description"],
                     turn_1_user=entry["turn_1_user"],
-                    turn_2_image=entry["turn_2_image"],
+                    turn_2_scene_description=entry["turn_2_scene_description"],
                     turn_2_user=entry["turn_2_user"],
-                    turn_3_repair_prompt=entry["turn_3_repair_prompt"],
-                    context_image=entry.get("context_image"),
+                    repair_prompt_named=entry["repair_prompt_named"],
+                    pre_turn_context_scene_description=entry.get("pre_turn_context_scene_description"),
                     time_gap_bucket=entry.get("time_gap_bucket"),
                     notes=entry.get("notes", ""),
-                    turn_3_repair_prompt_deictic=entry.get("turn_3_repair_prompt_deictic"),
-                    gold=gold,
+                    repair_prompt_deictic=entry.get("repair_prompt_deictic"),
+                    reference_answers=reference_answers,
                 )
             )
-    return scenarios
+    return tasks
 
 
 def _sha256_of_file(path: ResourcePath) -> str | None:
@@ -305,9 +325,9 @@ def _build_adapter(model_id: str) -> Any:
 def _build_manifest(
     *,
     effective_config: dict[str, Any],
-    resolved_judge: LLMJudge,
+    resolved_judge: JudgeLike,
     judge_resolution_mode: str,
-    ranking_judge: LLMJudge | None = None,
+    ranking_judge: JudgeLike | None = None,
 ) -> dict[str, Any]:
     """Construct the reproducibility manifest dict."""
     warnings: list[str] = []
@@ -320,13 +340,13 @@ def _build_manifest(
 
     judge_prompt_sha = hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest()
 
-    pack = effective_config.get("subset", "main")
+    task_set_value = effective_config.get("task_set", "main")
 
     manifest: dict[str, Any] = {
         "benchmark_version": BENCHMARK_VERSION,
-        "subset": pack,
+        "task_set": task_set_value,
         "camera_injection": not bool(effective_config.get("no_camera", False)),
-        "scenarios_sha256": _sha_or_warn(SCENARIOS_PATH, "scenarios_sha256"),
+        "tasks_sha256": _sha_or_warn(TASKS_PATH, "tasks_sha256"),
         "prompt_conditions_sha256": _sha_or_warn(
             PROMPT_CONDITIONS_PATH, "prompt_conditions_sha256"
         ),
@@ -351,9 +371,9 @@ def _build_manifest(
 
 def run(
     adapter: Any | None = None,
-    judge: LLMJudge | None = None,
+    judge: JudgeLike | None = None,
     config: dict[str, Any] | None = None,
-    ranking_judge: LLMJudge | None = None,
+    ranking_judge: JudgeLike | None = None,
 ) -> list[dict]:
     """Run the full benchmark and return the per-trial result list.
 
@@ -363,10 +383,10 @@ def run(
     Args:
         adapter: Candidate adapter. Defaults to the family-appropriate
             adapter resolved from `model_id`.
-        judge: `LLMJudge`. Defaults to the auto resolution against
+        judge: Judge-like object. Defaults to the auto resolution against
             `CONFIG["model_id"]`.
         config: Overrides for CONFIG. Unrecognized keys are ignored.
-        ranking_judge: Optional second `LLMJudge` used for
+        ranking_judge: Optional second judge object used for
             cross-candidate ranking comparability. When provided, every
             trial is also labeled by this fixed judge and the result
             dict carries both verdicts. Defaults to the family resolved
@@ -379,8 +399,8 @@ def run(
     """
     effective_config = {**CONFIG, **(config or {})}
 
-    pack = effective_config.get("subset", "main")
-    scenarios = load_scenarios(SCENARIOS_PATH, subset=pack)
+    task_set_value = effective_config.get("task_set", "main")
+    tasks = load_tasks(TASKS_PATH, task_set=task_set_value)
     conditions = load_prompt_conditions(PROMPT_CONDITIONS_PATH)
 
     model_config = ModelConfig(
@@ -389,6 +409,7 @@ def run(
     )
     adapter_ = adapter if adapter is not None else _build_adapter(effective_config["model_id"])
 
+    judge_: JudgeLike
     if judge is None:
         family, resolution_mode = resolve_judge_family(
             effective_config["judge_family"],
@@ -402,7 +423,7 @@ def run(
         judge_ = judge
         resolution_mode = "explicit"
 
-    ranking_judge_ = ranking_judge
+    ranking_judge_: JudgeLike | None = ranking_judge
     if ranking_judge_ is None and effective_config.get("ranking_judge_family"):
         ranking_judge_ = build_judge(
             family=effective_config["ranking_judge_family"],
@@ -417,12 +438,12 @@ def run(
 
     results: list[dict] = []
     with transcript_path.open("w", encoding="utf-8") as transcript_file:
-        for scenario in scenarios:
+        for task in tasks:
             for condition in conditions:
                 for trial in range(effective_config["trials_per_cell"]):
                     result = _run_one_trial(
-                        scenario=scenario,
-                        answers=scenario.gold,
+                        task=task,
+                        answers=task.reference_answers,
                         condition=condition,
                         trial=trial,
                         adapter=adapter_,
@@ -445,7 +466,7 @@ def run(
 
     findings = render_findings_markdown(
         results,
-        scenario_policies={s.scenario_id: s.target_context for s in scenarios},
+        task_policies={s.task_id: s.gold_label for s in tasks},
         manifest=manifest,
         ranking_condition=effective_config["ranking_condition"],
     )
@@ -468,39 +489,39 @@ def run(
     return results
 
 
-def _resolve_repair_anchor(scenario: Scenario, repair_style: str) -> tuple[str, str]:
+def _resolve_repair_anchor(task: Task, repair_style: str) -> tuple[str, str]:
     """Return ``(anchor_text, resolved_style)`` for the Turn 3 repair.
 
-    ``repair_style="named"`` always uses ``scenario.turn_3_repair_prompt``.
-    ``repair_style="deictic"`` uses ``scenario.turn_3_repair_prompt_deictic``
+    ``repair_style="named"`` always uses ``task.repair_prompt_named``.
+    ``repair_style="deictic"`` uses ``task.repair_prompt_deictic``
     when populated and falls back to the named anchor otherwise (for
-    scenarios where a deictic gesture cannot resolve the reference,
+    tasks where a deictic gesture cannot resolve the reference,
     e.g. absent_referent or cross_session_reference).
     """
-    if repair_style == "deictic" and scenario.turn_3_repair_prompt_deictic:
-        return scenario.turn_3_repair_prompt_deictic, "deictic"
-    return scenario.turn_3_repair_prompt, "named"
+    if repair_style == "deictic" and task.repair_prompt_deictic:
+        return task.repair_prompt_deictic, "deictic"
+    return task.repair_prompt_named, "named"
 
 
 def _run_one_trial(
     *,
-    scenario: Scenario,
+    task: Task,
     answers: AnswerSet,
     condition: PromptCondition,
     trial: int,
     adapter: Any,
-    judge: LLMJudge,
+    judge: JudgeLike,
     model_config: ModelConfig,
     no_camera: bool = False,
-    ranking_judge: LLMJudge | None = None,
+    ranking_judge: JudgeLike | None = None,
     repair_style: str = "named",
     enable_repair: bool = False,
 ) -> dict:
-    """Run one (scenario, condition, trial) cell end-to-end.
+    """Run one (task, condition, trial) cell end-to-end.
 
     When ``no_camera`` is True, the runner strips the ``[Camera: ...]``
     blocks from every user message and skips injecting the
-    ``context_image`` standalone message. The candidate sees only the
+    ``pre_turn_context_scene_description`` standalone message. The candidate sees only the
     user's spoken text. Used for camera channel ablation runs.
 
     When ``enable_repair`` is False (the default), a Turn 2 failure is
@@ -508,14 +529,14 @@ def _run_one_trial(
     fires the templated repair anchor and labels the Turn 3 response.
     """
     messages: list[dict[str, str]] = []
-    # Pre-conversation camera state (only set on cross_session_reference scenarios)
-    if scenario.context_image and not no_camera:
-        messages.append(_build_context_image_message(scenario.context_image))
+    # Pre-conversation camera state (only set on cross_session_reference tasks)
+    if task.pre_turn_context_scene_description and not no_camera:
+        messages.append(_build_pre_turn_context_scene_description_message(task.pre_turn_context_scene_description))
     messages.append(
         _build_message(
             role="user",
-            text=scenario.turn_1_user,
-            image=None if no_camera else scenario.turn_1_image,
+            text=task.turn_1_user,
+            image=None if no_camera else task.turn_1_scene_description,
         )
     )
     turn_1_response = adapter.query(
@@ -525,8 +546,8 @@ def _run_one_trial(
     messages.append(
         _build_message(
             role="user",
-            text=scenario.turn_2_user,
-            image=None if no_camera else scenario.turn_2_image,
+            text=task.turn_2_user,
+            image=None if no_camera else task.turn_2_scene_description,
         )
     )
     turn_2_response = adapter.query(
@@ -541,14 +562,14 @@ def _run_one_trial(
         abstain_indicators=answers.abstain_indicators,
     )
 
-    scenario_description = _build_scenario_description(scenario)
+    task_description = _build_task_description(task)
 
-    ground_truth_context = _build_ground_truth_context(scenario)
+    ground_truth_context = _build_ground_truth_context(task)
 
     judge_verdict = judge.label(
         response=turn_2_response,
-        scenario_description=scenario_description,
-        turn_2_user=scenario.turn_2_user,
+        task_description=task_description,
+        turn_2_user=task.turn_2_user,
         current_answers=answers.current_answers,
         prior_answers=answers.prior_answers,
         clarify_indicators=answers.clarify_indicators,
@@ -556,14 +577,14 @@ def _run_one_trial(
         ground_truth_context=ground_truth_context,
     )
 
-    turn_2_passed = judge_verdict.selected_label == scenario.target_context
+    turn_2_passed = judge_verdict.selected_label == task.gold_label
 
     turn_2_ranking_verdict: JudgeVerdict | None = None
     if ranking_judge is not None:
         turn_2_ranking_verdict = ranking_judge.label(
             response=turn_2_response,
-            scenario_description=scenario_description,
-            turn_2_user=scenario.turn_2_user,
+            task_description=task_description,
+            turn_2_user=task.turn_2_user,
             current_answers=answers.current_answers,
             prior_answers=answers.prior_answers,
             clarify_indicators=answers.clarify_indicators,
@@ -577,7 +598,7 @@ def _run_one_trial(
     repair_attempted = False
     turn_3_ranking_verdict: JudgeVerdict | None = None
 
-    repair_anchor_text, resolved_repair_style = _resolve_repair_anchor(scenario, repair_style)
+    repair_anchor_text, resolved_repair_style = _resolve_repair_anchor(task, repair_style)
 
     if enable_repair and not turn_2_passed:
         repair_attempted = True
@@ -588,7 +609,7 @@ def _run_one_trial(
         )
         turn_3_verdict = judge.label(
             response=turn_3_response,
-            scenario_description=scenario_description,
+            task_description=task_description,
             turn_2_user=repair_anchor_text,
             current_answers=answers.current_answers,
             prior_answers=answers.prior_answers,
@@ -596,11 +617,11 @@ def _run_one_trial(
             abstain_indicators=answers.abstain_indicators,
             ground_truth_context=ground_truth_context,
         )
-        turn_3_passed = turn_3_verdict.selected_label == scenario.target_context
+        turn_3_passed = turn_3_verdict.selected_label == task.gold_label
         if ranking_judge is not None:
             turn_3_ranking_verdict = ranking_judge.label(
                 response=turn_3_response,
-                scenario_description=scenario_description,
+                task_description=task_description,
                 turn_2_user=repair_anchor_text,
                 current_answers=answers.current_answers,
                 prior_answers=answers.prior_answers,
@@ -610,28 +631,27 @@ def _run_one_trial(
             )
 
     result: dict[str, Any] = {
-        "scenario_id": scenario.scenario_id,
-        "subset": scenario.subset,
-        "pair_id": scenario.pair_id,
+        "task_id": task.task_id,
+        "task_set": task.task_set,
         "condition": condition.name,
         "trial": trial,
-        "target_context": scenario.target_context,
-        "shift_type": scenario.shift_type,
-        "activity_domain": scenario.activity_domain,
-        "difficulty_tier": scenario.difficulty_tier,
-        "context_image": scenario.context_image,
-        "turn_1_user": scenario.turn_1_user,
-        "turn_1_image": scenario.turn_1_image,
+        "gold_label": task.gold_label,
+        "shift_type": task.shift_type,
+        "domain": task.domain,
+        "difficulty": task.difficulty,
+        "pre_turn_context_scene_description": task.pre_turn_context_scene_description,
+        "turn_1_user": task.turn_1_user,
+        "turn_1_scene_description": task.turn_1_scene_description,
         "turn_1_response": turn_1_response,
-        "turn_2_user": scenario.turn_2_user,
-        "turn_2_image": scenario.turn_2_image,
+        "turn_2_user": task.turn_2_user,
+        "turn_2_scene_description": task.turn_2_scene_description,
         "turn_2_response": turn_2_response,
         "turn_2_code_signals": code_signals,
         "turn_2_judge_label": judge_verdict.selected_label,
         "turn_2_judge_rationale": judge_verdict.rationale,
         "turn_2_passed": turn_2_passed,
         "turn_3_repair_attempted": repair_attempted,
-        "turn_3_repair_prompt": (repair_anchor_text if repair_attempted else None),
+        "repair_prompt_named": (repair_anchor_text if repair_attempted else None),
         "turn_3_repair_style": (resolved_repair_style if repair_attempted else None),
         "turn_3_response": turn_3_response,
         "turn_3_judge_label": (turn_3_verdict.selected_label if turn_3_verdict else None),
@@ -646,7 +666,7 @@ def _run_one_trial(
             turn_2_ranking_verdict.rationale if turn_2_ranking_verdict else None
         )
         result["turn_2_ranking_passed"] = (
-            (turn_2_ranking_verdict.selected_label == scenario.target_context)
+            (turn_2_ranking_verdict.selected_label == task.gold_label)
             if turn_2_ranking_verdict
             else None
         )
@@ -657,31 +677,31 @@ def _run_one_trial(
             turn_3_ranking_verdict.rationale if turn_3_ranking_verdict else None
         )
         result["turn_3_ranking_repair_passed"] = (
-            (turn_3_ranking_verdict.selected_label == scenario.target_context)
+            (turn_3_ranking_verdict.selected_label == task.gold_label)
             if turn_3_ranking_verdict
             else None
         )
     return result
 
 
-def _build_scenario_description(scenario: Scenario) -> str:
-    """Construct the scenario description shown to the judge.
+def _build_task_description(task: Task) -> str:
+    """Construct the task description shown to the judge.
 
-    Names neither the target_context nor the shift_type. Both would
+    Names neither the gold_label nor the shift_type. Both would
     leak the answer the judge is being asked to produce. The judge
     is pointed at the Turn 2 user message and camera frame as the
     perceptual fields that determine what the assistant should now
     be answering about.
     """
     return (
-        f"Turn 1 context:\n{scenario.turn_1_user}\n\n"
+        f"Turn 1 context:\n{task.turn_1_user}\n\n"
         f"Between Turn 1 and Turn 2 the user's context shifts. "
         f"The Turn 2 user message and camera frame describe what "
         f"the assistant should now be answering about."
     )
 
 
-def _build_ground_truth_context(scenario: Scenario) -> str:
+def _build_ground_truth_context(task: Task) -> str:
     """Construct the judge-only ground-truth description.
 
     The candidate model sees perceptual camera descriptions only (no
@@ -689,15 +709,15 @@ def _build_ground_truth_context(scenario: Scenario) -> str:
     the activity domain so it can determine whether the response
     reflects T2 or T1 context.
 
-    Deliberately omits target_context, shift_type, and authoring notes.
+    Deliberately omits gold_label, shift_type, and authoring notes.
     Those would either name or category-hint the answer the judge is
     being asked to produce.
     """
-    parts: list[str] = [f"Activity domain: {scenario.activity_domain}."]
-    if scenario.context_image:
-        parts.append(f"Pre-conversation camera state: {scenario.context_image}")
-    parts.append(f"Turn 1 camera state: {scenario.turn_1_image}")
-    parts.append(f"Turn 2 camera state: {scenario.turn_2_image}")
+    parts: list[str] = [f"Activity domain: {task.domain}."]
+    if task.pre_turn_context_scene_description:
+        parts.append(f"Pre-conversation camera state: {task.pre_turn_context_scene_description}")
+    parts.append(f"Turn 1 camera state: {task.turn_1_scene_description}")
+    parts.append(f"Turn 2 camera state: {task.turn_2_scene_description}")
     return "\n\n".join(parts)
 
 
@@ -723,10 +743,10 @@ def _build_message(*, role: str, text: str, image: str | None) -> dict[str, str]
     return {"role": role, "content": text}
 
 
-def _build_context_image_message(image: str) -> dict[str, str]:
-    """Build a standalone camera channel message for `context_image`.
+def _build_pre_turn_context_scene_description_message(image: str) -> dict[str, str]:
+    """Build a standalone camera channel message for `pre_turn_context_scene_description`.
 
-    `context_image` represents what the wearable's camera saw before any
+    `pre_turn_context_scene_description` represents what the wearable's camera saw before any
     user speech began. It is injected as a user-role message containing
     only the `[Camera: ...]` block, with no spoken text. This precedes
     the T1 message in the conversation.
@@ -797,7 +817,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="trials",
         type=int,
         default=None,
-        help=(f"trials per (scenario, condition) cell; default is {CONFIG['trials_per_cell']}"),
+        help=(f"trials per (task, condition) cell; default is {CONFIG['trials_per_cell']}"),
     )
     parser.add_argument(
         "--output-dir",
@@ -814,7 +834,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=False,
         help=(
             "ablation flag: strip [Camera: ...] blocks from every user "
-            "message and skip injecting context_image. Run with this flag "
+            "message and skip injecting pre_turn_context_scene_description. Run with this flag "
             "to measure the contribution of the camera channel by "
             "comparing the score against a normal run with the same model."
         ),
@@ -841,9 +861,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "--enable-repair. `named` (default) uses the explicit "
             "repair line that names both the intended and the wrong "
             "objects. `deictic` uses the deictic-only anchor when "
-            "populated and falls back to named for scenarios where a "
+            "populated and falls back to named for tasks where a "
             "deictic gesture cannot resolve the reference (e.g. "
-            "absent_referent, cross_session_reference, target_context "
+            "absent_referent, cross_session_reference, gold_label "
             "!= current)."
         ),
     )

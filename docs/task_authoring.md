@@ -1,13 +1,13 @@
-# Scenario Authoring Rules
+# Task Authoring Rules
 
-These rules govern how scenarios are written for the Wearable Assistant
-Context Bench. Every scenario must follow them. The validation
-script in `scripts/validate_scenarios.py` enforces them programmatically;
+These rules govern how tasks are written for the Wearable Assistant
+Context Bench. Every task must follow them. The validation
+script in `scripts/validate_tasks.py` enforces them programmatically;
 the writing-rule sections of this document explain what to write and
 why.
 
-If you are writing a new scenario, read this whole document first.
-Then check your scenario against the validation checklist at the bottom
+If you are writing a new task, read this whole document first.
+Then check your task against the validation checklist at the bottom
 before submitting.
 
 ---
@@ -33,17 +33,17 @@ benchmark does not measure.
 
 ## What the model and judge see
 
-Each scenario splits its content between what the candidate model
+Each task splits its content between what the candidate model
 sees and what the judge sees:
 
 | Field group | Fields | Visible to candidate | Visible to judge |
 |---|---|---|---|
-| User messages | `turn_1_user`, `turn_2_user`, `turn_3_repair_prompt` | Yes | Yes |
-| Scene descriptions | `context_image`, `turn_1_image`, `turn_2_image` | Yes (as `[Camera: ...]` blocks) | Yes |
+| User messages | `turn_1_user`, `turn_2_user`, `repair_prompt_named` | Yes | Yes |
+| Scene descriptions | `pre_turn_context_scene_description`, `turn_1_scene_description`, `turn_2_scene_description` | Yes (as `[Camera: ...]` blocks) | Yes |
 | Gold answers | `current_answers`, `prior_answers`, `clarify_indicators`, `abstain_indicators` | No | Yes |
 
 The candidate sees the user message and the scene description. The
-judge sees the same plus the gold answer keys, and uses them to
+judge sees the same plus the reference answer keys, and uses them to
 score which context the candidate's response reflects.
 
 ---
@@ -86,10 +86,10 @@ sounds. The user does not narrate what the video shows.
 | "I'm in the kitchen now looking at the pot on the stove." | "Is this ready?" |
 | "Now I'm holding the claw hammer instead." | "What about now?" |
 
-### Special case: prior scenarios
+### Special case: prior tasks
 
-For scenarios where the correct answer refers back to Turn 1 context
-(`target_context: "prior"`), Turn 2 user speech may use a temporal
+For tasks where the correct answer refers back to Turn 1 context
+(`gold_label: "prior"`), Turn 2 user speech may use a temporal
 reference (`"thinking back to before"`, `"what was the reading
 earlier"`). It still must not name the Turn 1 object or describe what
 was previously visible.
@@ -128,7 +128,7 @@ technique evaluation.
 
 ### Quality bar: the human identification test
 
-Show the description to a person with no scenario context. They should
+Show the description to a person with no task context. They should
 be able to identify the object with high confidence. If they cannot,
 add more distinguishing scene detail. If they identify it immediately
 from one feature, that is acceptable. The description does not need
@@ -146,29 +146,29 @@ to be cryptic, only non-labeled.
 
 ## Repair anchor rules
 
-Every scenario must populate `turn_3_repair_prompt` (the named anchor).
-Visible-referent `current`-target scenarios additionally populate
-`turn_3_repair_prompt_deictic` (the deictic anchor).
+Every task must populate `repair_prompt_named` (the named anchor).
+Visible-referent tasks with `gold_label: "current"` additionally
+populate `repair_prompt_deictic` (the deictic anchor).
 
 ### Named anchor
 
-`turn_3_repair_prompt` names both the intended object and the wrong
+`repair_prompt_named` names both the intended object and the wrong
 object explicitly: *"I mean the hammer I'm holding now, not the
 screwdriver from before."*
 
-The named anchor is required on every scenario.
+The named anchor is required on every task.
 
 ### Deictic anchor
 
-`turn_3_repair_prompt_deictic` uses pure spatial or temporal deictic
+`repair_prompt_deictic` uses pure spatial or temporal deictic
 language: *"I mean this thing in my hand right now"* or *"I mean what
 I'm looking at."* It must not name either object.
 
 Populate the deictic field only when **all three** are true:
 
-1. `target_context == "current"` (the user is repairing toward the
+1. `gold_label == "current"` (the user is repairing toward the
    present frame).
-2. `shift_type` ∈ {`object_in_hand`, `object_in_view`, `object_state`,
+2. `shift_type` in {`object_in_hand`, `object_in_view`, `object_state`,
    `screen_content`, `sequential_task`, `location`}. These are the
    visible-referent categories where a real wearable's vision system
    could resolve a deictic gesture.
@@ -176,7 +176,7 @@ Populate the deictic field only when **all three** are true:
    (i.e. the deictic gesture is technically resolvable).
 
 Leave the field as `null` for `absent_referent`,
-`cross_session_reference`, and any scenario whose target is `prior`,
+`cross_session_reference`, and any task whose `gold_label` is `prior`,
 `clarify`, or `abstain`. The runner falls back to the named anchor in
 those cases when invoked with `--repair-style deictic`.
 
@@ -192,10 +192,10 @@ fields.
 The shift between Turn 1 and Turn 2 is visible only in the scene
 description. It is never announced in the user message.
 
-- `turn_1_image` and `turn_2_image` describe different situations
+- `turn_1_scene_description` and `turn_2_scene_description` describe different situations
   (different object, location, or state)
 - `turn_2_user` does not reference the change
-- `turn_2_image` does not compare to or reference `turn_1_image`
+- `turn_2_scene_description` does not compare to or reference `turn_1_scene_description`
 
 The shift between states is intentionally implicit in the benchmark.
 A real wearable model processes a continuous video stream and observes
@@ -203,16 +203,16 @@ transitions naturally; the benchmark represents the moment of Turn 1
 and the moment of Turn 2 and lets the model infer that a shift
 occurred from the difference.
 
-### When to use `context_image`
+### When to use `pre_turn_context_scene_description`
 
-Set `context_image` when the scenario requires the model to access a
+Set `pre_turn_context_scene_description` when the task requires the model to access a
 state that existed **before Turn 1 was spoken**. This applies to:
 
-- Recall scenarios where Turn 2 asks about something from before the
+- Recall tasks where Turn 2 asks about something from before the
   conversation began
-- `cross_session_reference` shift type scenarios
+- `cross_session_reference` shift type tasks
 
-For all other scenarios, `context_image` is null and `turn_1_image`
+For all other tasks, `pre_turn_context_scene_description` is null and `turn_1_scene_description`
 establishes the initial state.
 
 ---
@@ -245,7 +245,7 @@ A response that hits any one of them counts.
 
 ### `clarify_indicators` and `abstain_indicators`
 
-For scenarios where the correct response is to ask for clarification
+For tasks where the correct response is to ask for clarification
 or decline to answer:
 
 - `clarify_indicators` lists phrases that indicate a clarifying
@@ -253,7 +253,7 @@ or decline to answer:
 - `abstain_indicators` lists phrases that indicate refusal
   (`"I can't tell"`, `"not enough to go on"`, `"need more info"`)
 
-Both lists may be empty for scenarios where the target is `current` or
+Both lists may be empty for tasks where `gold_label` is `current` or
 `prior`.
 
 ---
@@ -268,7 +268,7 @@ The runner builds each user turn as:
 ```
 
 When the image field is null, the `[Camera: ...]` block is omitted and only the
-user message is sent. When `context_image` is populated, it is injected
+user message is sent. When `pre_turn_context_scene_description` is populated, it is injected
 as a `[Camera: ...]` block before Turn 1, with no user message attached.
 
 The candidate model sees the `[Camera: ...]` block as part of the user turn.
@@ -279,7 +279,7 @@ in a separate ground-truth section.
 
 ## Validation checklist (10 points)
 
-Every scenario must pass all ten before being committed:
+Every task must pass all ten before being committed:
 
 1. T1 user speech contains no object names or visible-property
    descriptions
@@ -295,7 +295,7 @@ Every scenario must pass all ten before being committed:
 8. No `current_answers` or `prior_answers` token appears in any user
    speech field (word-boundary, case-insensitive)
 9. The context shift is detectable only through the difference between
-   `turn_1_image` and `turn_2_image`
+   `turn_1_scene_description` and `turn_2_scene_description`
 10. Each `current_answers` and `prior_answers` list includes at least
     one item from each of the three vocabulary categories (object
     name, technique vocabulary, state descriptors)

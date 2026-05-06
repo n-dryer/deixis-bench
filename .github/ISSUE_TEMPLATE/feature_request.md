@@ -14,12 +14,12 @@ labels: ["enhancement"]
 
 ## Scope check
 
-This benchmark is narrow on purpose. It tests one failure mode —
-cross-turn reference resolution — and not general assistant quality.
+This benchmark is narrow on purpose. It tests one failure mode -
+cross-turn reference resolution - and not general assistant quality.
 See the [scope statement](../CONTRIBUTING.md#scope) and
 [release policy](../CONTRIBUTING.md#release-policy).
 
-- [ ] This change preserves the scenario set, prompt conditions, judge labels, and scoring rule
+- [ ] This change preserves the task set, prompt conditions, judge labels, and scoring rule
 - [ ] If it does not, I understand a `BENCHMARK_VERSION` bump is required and have called that out below
 
 ## Alternatives considered

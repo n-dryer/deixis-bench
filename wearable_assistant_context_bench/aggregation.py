@@ -1,23 +1,22 @@
 """Metric and aggregation surface for benchmark results.
 
 The runner produces one result dict per trial. Functions here roll
-those up into per-class recall, per-subset and per-shift-type
-breakdowns, contrast-pair consistency, hedging rates, simulated
-repair rates, inter-judge agreement, and the scenario x condition
+those up into per-class recall, per-task-set and per-shift-type
+breakdowns, hedging rates, simulated
+repair rates, inter-judge agreement, and the task x condition
 matrix used by the Markdown renderer in
 :mod:`wearable_assistant_context_bench.rendering`.
 
 Expected per-trial result dict keys:
-    scenario_id (str)
-    subset (str): always "main" in the unified scenario set
-    pair_id (str | None)
-    target_context (str): one of "current", "prior", "clarify", "abstain"
+    task_id (str)
+    task_set (str): always "main" in the unified task set
+    gold_label (str): one of "current", "prior", "clarify", "abstain"
     shift_type (str)
     condition (str)
     trial (int)
     turn_2_code_signals (dict)
     turn_2_judge_label (str)
-    turn_2_passed (bool): judge_label == target_context
+    turn_2_passed (bool): judge_label == gold_label
     turn_3_repair_attempted (bool)
     turn_3_repair_passed (bool | None)
 """
@@ -64,7 +63,7 @@ def wilson_interval(
 
 POLICIES: tuple[str, ...] = ("current", "prior", "clarify", "abstain")
 SCORED_POLICIES: tuple[str, ...] = ("current", "prior")
-CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "condition_a", "condition_b")
+CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "context_selection_instruction", "pre_answer_context_scaffold")
 AUXILIARY_POLICY_NOTE: str = "auxiliary; not included in the primary current/prior score"
 
 BENCHMARK_NAME: str = "Wearable Assistant Context Bench"
@@ -85,7 +84,7 @@ class PassRateCell:
         total: Total trials in this cell.
         primary_scored: True when the policy contributes to the primary
             balanced-accuracy metric (`current`, `prior`). Auxiliary
-            policies still report rates when scenarios are present.
+            policies still report rates when tasks are present.
     """
 
     passed: int
@@ -113,15 +112,15 @@ class RepairRateCell:
         return self.repaired / self.failures
 
 
-def _policies_with_scenarios(results: list[dict]) -> set[str]:
-    return {r["target_context"] for r in results}
+def _policies_with_tasks(results: list[dict]) -> set[str]:
+    return {r["gold_label"] for r in results}
 
 
 def per_policy_pass_rate_by_condition(
     results: list[dict],
 ) -> dict[str, dict[str, PassRateCell]]:
     """Group per-trial results into a policy x condition grid of pass rates."""
-    observed_policies = _policies_with_scenarios(results)
+    observed_policies = _policies_with_tasks(results)
     conditions = sorted({r["condition"] for r in results}, key=_condition_sort_key)
     grid: dict[str, dict[str, PassRateCell]] = {}
     for policy in POLICIES:
@@ -135,7 +134,7 @@ def per_policy_pass_rate_by_condition(
             passed = 0
             total = 0
             for trial in results:
-                if trial["target_context"] != policy:
+                if trial["gold_label"] != policy:
                     continue
                 if trial["condition"] != condition:
                     continue
@@ -158,9 +157,10 @@ def class_recall_under_condition(
 
     These are recall values, not overall accuracy: with four judge
     labels (current/prior/clarify/abstain) a trial is "correct" only
-    when ``judge_label == target_context``. The denominator is trials
-    whose ``target_context`` equals the named policy (TP + FN); the
-    numerator is the subset where ``turn_2_passed`` is True (TP).
+    when ``judge_label == gold_label``. The denominator is trials
+    whose ``gold_label`` equals the named policy (TP + FN); the
+    numerator is the portion of those trials where ``turn_2_passed`` is
+    True (TP).
     Clarify / abstain trials get their own denominator the same way.
 
     Returns a dict keyed on the **scored** policies (``prior``,
@@ -174,7 +174,7 @@ def class_recall_under_condition(
         for trial in results:
             if trial["condition"] != condition:
                 continue
-            if trial["target_context"] != policy:
+            if trial["gold_label"] != policy:
                 continue
             total += 1
             if bool(trial["turn_2_passed"]):
@@ -200,7 +200,7 @@ def class_recall_with_ci_under_condition(
         for trial in results:
             if trial["condition"] != condition:
                 continue
-            if trial["target_context"] != policy:
+            if trial["gold_label"] != policy:
                 continue
             total += 1
             if bool(trial["turn_2_passed"]):
@@ -218,7 +218,7 @@ def mean_recall_under_condition(
     Defined as the mean of per-class recall across the two scored
     policies (``prior``, ``current``). Clarify / abstain trials
     contribute to their class's denominator as wrong answers (they
-    never pass the target-policy match), matching the rule that they
+    never pass the policy-label match), matching the rule that they
     count as wrong for the primary score.
     """
     classes = class_recall_under_condition(results, condition)
@@ -255,7 +255,7 @@ def mean_recall_with_ci_under_condition(
     for trial in results:
         if trial["condition"] != condition:
             continue
-        policy = trial["target_context"]
+        policy = trial["gold_label"]
         if policy not in SCORED_POLICIES:
             continue
         n_total[policy] += 1
@@ -290,7 +290,7 @@ def mean_recall_with_bootstrap_ci_under_condition(
     for trial in results:
         if trial["condition"] != condition:
             continue
-        policy = trial["target_context"]
+        policy = trial["gold_label"]
         if policy not in SCORED_POLICIES:
             continue
         by_class[policy].append(1.0 if bool(trial["turn_2_passed"]) else 0.0)
@@ -318,25 +318,25 @@ def mean_recall_with_bootstrap_ci_under_condition(
     return point, bootstraps[lo_idx], bootstraps[hi_idx]
 
 
-def recall_by_subset(
+def recall_by_task_set(
     results: list[dict],
     condition: str,
 ) -> dict[str, tuple[float, float, float] | None]:
-    """Mean per-class recall sliced by ``subset``.
+    """Mean per-class recall sliced by ``task_set``.
 
-    Returns a dict keyed on subset value. Each value is
+    Returns a dict keyed on task_set value. Each value is
     ``(mean, lo, hi)`` from the normal-approximation CI, or ``None``
     when one of the scored classes has no trials. In the unified
-    scenario set, all real trials live in the ``main`` bucket; the
+    task set, all real trials live in the ``main`` bucket; the
     function still partitions correctly if a future split is added.
     """
-    by_pack: dict[str, list[dict]] = defaultdict(list)
+    by_task_set: dict[str, list[dict]] = defaultdict(list)
     for trial in results:
-        pack = trial.get("subset") or "main"
-        by_pack[pack].append(trial)
+        task_set_value = trial.get("task_set") or "main"
+        by_task_set[task_set_value].append(trial)
     return {
-        pack: mean_recall_with_ci_under_condition(trials, condition)
-        for pack, trials in by_pack.items()
+        task_set_value: mean_recall_with_ci_under_condition(trials, condition)
+        for task_set_value, trials in by_task_set.items()
     }
 
 
@@ -364,50 +364,6 @@ def recall_by_shift_type(
     return out
 
 
-def contrast_pair_consistency(
-    results: list[dict],
-    condition: str | None = None,
-) -> dict[str, Any]:
-    """Pair-consistency rate over scenarios linked by ``pair_id``.
-
-    Groups trials by ``pair_id`` and computes the share of pairs
-    where every member trial passed Turn 2. Trials with no
-    ``pair_id`` are ignored. When ``condition`` is non-None, only
-    trials in that condition contribute.
-
-    Returns a dict with:
-        ``pairs_evaluated`` (int)
-        ``consistency_rate`` (float | None)
-        ``ci`` (tuple[float, float] | None) — Wilson CI bounds
-        ``note`` (str) — set when no pair_id metadata is present
-    """
-    pairs: dict[str, list[bool]] = defaultdict(list)
-    for trial in results:
-        if condition is not None and trial["condition"] != condition:
-            continue
-        pair_id = trial.get("pair_id")
-        if not pair_id:
-            continue
-        pairs[pair_id].append(bool(trial["turn_2_passed"]))
-    if not pairs:
-        return {
-            "pairs_evaluated": 0,
-            "consistency_rate": None,
-            "ci": None,
-            "note": ("no pair_id metadata on any scenario; metric not applicable"),
-        }
-    consistent = sum(1 for outcomes in pairs.values() if all(outcomes))
-    total = len(pairs)
-    triple = wilson_interval(consistent, total)
-    ci = None if triple is None else (triple[1], triple[2])
-    return {
-        "pairs_evaluated": total,
-        "consistency_rate": consistent / total,
-        "ci": ci,
-        "note": "",
-    }
-
-
 def clarify_rate(results: list[dict], condition: str) -> tuple[float, float, float] | None:
     """Share of trials whose primary judge label is ``clarify``."""
     return _label_rate(results, condition, label="clarify")
@@ -419,7 +375,7 @@ def abstain_rate(results: list[dict], condition: str) -> tuple[float, float, flo
 
 
 def coverage_rate(results: list[dict], condition: str) -> tuple[float, float, float] | None:
-    """``1 - (clarify_rate + abstain_rate)`` — share of substantive answers.
+    """``1 - (clarify_rate + abstain_rate)`` - share of substantive answers.
 
     Low coverage indicates excessive hedging. Reported as a Wilson CI
     over the binary "substantive" label.
@@ -459,7 +415,7 @@ def build_run_summary_dict(
 
     Returns:
         A JSON-serializable dict with primary score, per-class recall,
-        per-pack recall, hedging rates, the benchmark version, and a
+        per-task-set recall, hedging rates, the benchmark version, and a
         small config snapshot.
     """
 
@@ -471,18 +427,21 @@ def build_run_summary_dict(
 
     primary = mean_recall_with_ci_under_condition(results, ranking_condition)
     per_class = class_recall_with_ci_under_condition(results, ranking_condition)
-    per_pack = recall_by_subset(results, ranking_condition)
+    per_task_set = recall_by_task_set(results, ranking_condition)
     return {
         "run_label": run_label,
         "n_trials": len(results),
-        "n_scenarios": len({r["scenario_id"] for r in results}),
+        "n_tasks": len({r["task_id"] for r in results}),
         "candidate_model": manifest.get("candidate_model"),
         "judge_model": manifest.get("judge_model"),
         "judge_family": manifest.get("judge_family"),
         "ranking_condition": ranking_condition,
         "primary_score_mean_recall": _ci(primary),
         "per_class_recall": {policy: _ci(triple) for policy, triple in per_class.items()},
-        "per_subset_recall": {pack: _ci(triple) for pack, triple in per_pack.items()},
+        "per_task_set_recall": {
+            task_set_value: _ci(triple)
+            for task_set_value, triple in per_task_set.items()
+        },
         "clarify_rate": _ci(clarify_rate(results, ranking_condition)),
         "abstain_rate": _ci(abstain_rate(results, ranking_condition)),
         "coverage_rate": _ci(coverage_rate(results, ranking_condition)),
@@ -490,7 +449,7 @@ def build_run_summary_dict(
         "config_snapshot": {
             "trials": manifest.get("trials"),
             "temperature": manifest.get("temperature"),
-            "subset": manifest.get("subset"),
+            "task_set": manifest.get("task_set"),
             "no_camera": manifest.get("camera_injection") is False,
             "enable_repair": manifest.get("enable_repair"),
         },
@@ -593,10 +552,10 @@ def inter_judge_agreement_summary(
     }
 
 
-def inter_judge_disagreement_by_scenario(
+def inter_judge_disagreement_by_task(
     results: list[dict],
 ) -> dict[str, int]:
-    """Per-scenario count of trials where the two judges disagreed.
+    """Per-task count of trials where the two judges disagreed.
 
     Only counts trials that carry both judge labels.
     """
@@ -607,32 +566,32 @@ def inter_judge_disagreement_by_scenario(
         if primary is None or ranking is None:
             continue
         if primary != ranking:
-            counts[trial["scenario_id"]] += 1
+            counts[trial["task_id"]] += 1
     return dict(counts)
 
 
-def code_judge_disagreement_by_scenario(results: list[dict]) -> dict[str, int]:
+def code_judge_disagreement_by_task(results: list[dict]) -> dict[str, int]:
     """Count trials where code signals imply a different policy than judge."""
     counts: dict[str, int] = defaultdict(int)
-    scenario_ids = {r["scenario_id"] for r in results}
-    for scenario_id in scenario_ids:
-        counts[scenario_id] = 0
+    task_ids = {r["task_id"] for r in results}
+    for task_id in task_ids:
+        counts[task_id] = 0
     for trial in results:
         code_policy = _code_implied_policy(trial.get("turn_2_code_signals") or {})
         if code_policy is None:
             continue
         if code_policy != trial.get("turn_2_judge_label"):
-            counts[trial["scenario_id"]] += 1
+            counts[trial["task_id"]] += 1
     return dict(counts)
 
 
-def scenario_by_condition_matrix(
+def task_by_condition_matrix(
     results: list[dict],
 ) -> dict[str, dict[str, list[dict]]]:
-    """Group per-trial outcomes into a scenario x condition grid."""
+    """Group per-trial outcomes into a task x condition grid."""
     grid: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for trial in results:
-        grid[trial["scenario_id"]][trial["condition"]].append(
+        grid[trial["task_id"]][trial["condition"]].append(
             {
                 "trial": trial["trial"],
                 "turn_2_passed": bool(trial["turn_2_passed"]),
@@ -640,15 +599,15 @@ def scenario_by_condition_matrix(
                 "turn_3_repair_passed": trial.get("turn_3_repair_passed"),
             }
         )
-    for scenario in grid.values():
-        for cell in scenario.values():
+    for task in grid.values():
+        for cell in task.values():
             cell.sort(key=lambda entry: entry["trial"])
-    return {scenario_id: dict(cells) for scenario_id, cells in grid.items()}
+    return {task_id: dict(cells) for task_id, cells in grid.items()}
 
 
 REQUIRED_MANIFEST_KEYS: tuple[str, ...] = (
     "benchmark_version",
-    "scenarios_sha256",
+    "tasks_sha256",
     "prompt_conditions_sha256",
     "candidate_model",
     "judge_model",

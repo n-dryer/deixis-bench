@@ -1,12 +1,12 @@
 """
-Validate the scenario set against the authoring rules.
+Validate the task set against the authoring rules.
 
 Runs four programmatic checks (Checks 1, 2, 3, 6 from the rebuild plan).
 The semantic checks (Check 4: human identification, Check 5: semantic leakage)
-are LLM-driven and run separately during scenario authoring.
+are LLM-driven and run separately during task authoring.
 
 Usage:
-    python scripts/validate_scenarios.py [--json]
+    python scripts/validate_tasks.py [--json]
 
 Exits 0 if all checks pass, 1 otherwise.
 """
@@ -21,7 +21,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-SCENARIOS_PATH = Path("data/wacb.jsonl")
+TASKS_PATH = Path("data/tasks.jsonl")
 PROMPT_CONDITIONS_PATH = Path("data/prompt_conditions.json")
 LOCKFILE_PATH = Path("data/MANIFEST.lock.json")
 
@@ -144,7 +144,7 @@ def word_match(token: str, text: str) -> bool:
     return bool(re.search(pattern, text.lower()))
 
 
-def _load_scenarios_jsonl(path: Path) -> list[dict]:
+def _load_tasks_jsonl(path: Path) -> list[dict]:
     out: list[dict] = []
     with path.open("r", encoding="utf-8") as f:
         for raw_line in f:
@@ -155,40 +155,40 @@ def _load_scenarios_jsonl(path: Path) -> list[dict]:
     return out
 
 
-def check_1_token_leakage(scenarios):
+def check_1_token_leakage(tasks):
     """Check 1: No ``current_answers`` or ``prior_answers`` token appears in
     any user speech field (including the optional deictic repair anchor).
 
-    The named repair anchor (``turn_3_repair_prompt``) is exempt because
+    The named repair anchor (``repair_prompt_named``) is exempt because
     it deliberately names the intended and wrong objects to measure
     floor recoverability.
     """
     fails = []
-    for sc in scenarios:
-        sid = sc["scenario_id"]
-        gold = sc.get("gold") or {}
+    for sc in tasks:
+        sid = sc["task_id"]
+        reference_answers = sc.get("reference_answers") or {}
         speech_fields = [
             ("turn_1_user", sc.get("turn_1_user", "") or ""),
             ("turn_2_user", sc.get("turn_2_user", "") or ""),
         ]
-        deictic = sc.get("turn_3_repair_prompt_deictic")
+        deictic = sc.get("repair_prompt_deictic")
         if deictic:
-            speech_fields.append(("turn_3_repair_prompt_deictic", deictic))
+            speech_fields.append(("repair_prompt_deictic", deictic))
         for field_name, text in speech_fields:
-            for token in gold.get("current_answers", []):
+            for token in reference_answers.get("current_answers", []):
                 if word_match(token, text):
                     fails.append(
                         {
-                            "scenario_id": sid,
+                            "task_id": sid,
                             "check": "token_leakage",
                             "detail": f"current_answers token {token!r} appears in {field_name}",
                         }
                     )
-            for token in gold.get("prior_answers", []):
+            for token in reference_answers.get("prior_answers", []):
                 if word_match(token, text):
                     fails.append(
                         {
-                            "scenario_id": sid,
+                            "task_id": sid,
                             "check": "token_leakage",
                             "detail": f"prior_answers token {token!r} appears in {field_name}",
                         }
@@ -196,15 +196,15 @@ def check_1_token_leakage(scenarios):
     return fails
 
 
-def check_2_object_name_in_images(scenarios):
+def check_2_object_name_in_images(tasks):
     """Check 2: No common object name appears in any image description."""
     fails = []
-    for sc in scenarios:
-        sid = sc["scenario_id"]
+    for sc in tasks:
+        sid = sc["task_id"]
         image_fields = [
-            ("context_image", sc.get("context_image") or ""),
-            ("turn_1_image", sc.get("turn_1_image") or ""),
-            ("turn_2_image", sc.get("turn_2_image") or ""),
+            ("pre_turn_context_scene_description", sc.get("pre_turn_context_scene_description") or ""),
+            ("turn_1_scene_description", sc.get("turn_1_scene_description") or ""),
+            ("turn_2_scene_description", sc.get("turn_2_scene_description") or ""),
         ]
         for field_name, text in image_fields:
             if not text:
@@ -213,7 +213,7 @@ def check_2_object_name_in_images(scenarios):
                 if word_match(name, text):
                     fails.append(
                         {
-                            "scenario_id": sid,
+                            "task_id": sid,
                             "check": "object_name_in_image",
                             "detail": f"object name {name!r} appears in {field_name}",
                         }
@@ -221,31 +221,31 @@ def check_2_object_name_in_images(scenarios):
     return fails
 
 
-def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
+def check_3_schema_validation(tasks, enforce_distribution: bool = True):
     """Check 3: Required fields present, types correct, IDs unique,
     distributions match.
 
     ``enforce_distribution`` toggles the shift_type distribution check.
-    The frozen 166-scenario unified set pins exact counts.
+    The frozen 166-task unified set pins exact counts.
     """
     fails = []
-    required_scenario_fields = {
-        "scenario_id",
-        "subset",
-        "target_context",
+    required_task_fields = {
+        "task_id",
+        "task_set",
+        "gold_label",
         "shift_type",
-        "activity_domain",
+        "domain",
         "referent_complexity",
-        "difficulty_tier",
-        "context_image",
-        "turn_1_image",
+        "difficulty",
+        "pre_turn_context_scene_description",
+        "turn_1_scene_description",
         "turn_1_user",
-        "turn_2_image",
+        "turn_2_scene_description",
         "turn_2_user",
-        "turn_3_repair_prompt",
-        "gold",
+        "repair_prompt_named",
+        "reference_answers",
     }
-    valid_target_context = {"current", "prior", "clarify", "abstain"}
+    valid_gold_label = {"current", "prior", "clarify", "abstain"}
     valid_shift_type = {
         "object_in_hand",
         "object_state",
@@ -257,17 +257,17 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         "cross_session_reference",
     }
     valid_difficulty = {"easy", "medium", "hard"}
-    valid_subset = {"main"}
+    valid_task_set = {"main"}
 
     seen_ids = set()
-    for sc in scenarios:
-        sid = sc.get("scenario_id", "<no-id>")
+    for sc in tasks:
+        sid = sc.get("task_id", "<no-id>")
         # Required fields
-        missing = required_scenario_fields - set(sc.keys())
+        missing = required_task_fields - set(sc.keys())
         if missing:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
                     "detail": f"missing fields: {sorted(missing)}",
                 }
@@ -276,138 +276,138 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
         if sid in seen_ids:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "duplicate scenario_id",
+                    "detail": "duplicate task_id",
                 }
             )
         seen_ids.add(sid)
         # Enum validation
-        if sc.get("subset") not in valid_subset:
+        if sc.get("task_set") not in valid_task_set:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": f"invalid subset: {sc.get('subset')!r}",
+                    "detail": f"invalid task_set: {sc.get('task_set')!r}",
                 }
             )
-        if sc.get("target_context") not in valid_target_context:
+        if sc.get("gold_label") not in valid_gold_label:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": f"invalid target_context: {sc.get('target_context')!r}",
+                    "detail": f"invalid gold_label: {sc.get('gold_label')!r}",
                 }
             )
         if sc.get("shift_type") not in valid_shift_type:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
                     "detail": f"invalid shift_type: {sc.get('shift_type')!r}",
                 }
             )
-        if sc.get("difficulty_tier") not in valid_difficulty:
+        if sc.get("difficulty") not in valid_difficulty:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": f"invalid difficulty_tier: {sc.get('difficulty_tier')!r}",
+                    "detail": f"invalid difficulty: {sc.get('difficulty')!r}",
                 }
             )
-        # cross_session_reference must have non-null context_image
-        if sc.get("shift_type") == "cross_session_reference" and not sc.get("context_image"):
+        # cross_session_reference must have non-null pre_turn_context_scene_description
+        if sc.get("shift_type") == "cross_session_reference" and not sc.get("pre_turn_context_scene_description"):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "cross_session_reference scenarios must have context_image populated",
+                    "detail": "cross_session_reference tasks must have pre_turn_context_scene_description populated",
                 }
             )
-        # turn_1_image and turn_2_image must be populated
-        if not sc.get("turn_1_image"):
+        # turn_1_scene_description and turn_2_scene_description must be populated
+        if not sc.get("turn_1_scene_description"):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "turn_1_image must be non-null",
+                    "detail": "turn_1_scene_description must be non-null",
                 }
             )
-        if not sc.get("turn_2_image"):
+        if not sc.get("turn_2_scene_description"):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "turn_2_image must be non-null",
+                    "detail": "turn_2_scene_description must be non-null",
                 }
             )
-        # gold answers entry must exist
-        gold = sc.get("gold")
-        if gold is None or not isinstance(gold, dict):
+        # reference answers entry must exist
+        reference_answers = sc.get("reference_answers")
+        if reference_answers is None or not isinstance(reference_answers, dict):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "missing or invalid `gold` field",
+                    "detail": "missing or invalid `reference_answers` field",
                 }
             )
             continue
         # Three-category answer rule for current and prior
-        target = sc.get("target_context")
-        if target == "current":
-            if not gold.get("current_answers"):
+        label = sc.get("gold_label")
+        if label == "current":
+            if not reference_answers.get("current_answers"):
                 fails.append(
                     {
-                        "scenario_id": sid,
+                        "task_id": sid,
                         "check": "schema",
-                        "detail": "current target_context but current_answers is empty",
+                        "detail": "current gold_label but current_answers is empty",
                     }
                 )
-            if len(gold.get("current_answers", [])) < 3:
+            if len(reference_answers.get("current_answers", [])) < 3:
                 fails.append(
                     {
-                        "scenario_id": sid,
+                        "task_id": sid,
                         "check": "schema",
-                        "detail": "current_answers must include 3+ items (object name, technique, state) — fewer than 3 found",
+                        "detail": "current_answers must include 3+ items (object name, technique, state) - fewer than 3 found",
                     }
                 )
-        if target == "prior":
-            if not gold.get("prior_answers"):
+        if label == "prior":
+            if not reference_answers.get("prior_answers"):
                 fails.append(
                     {
-                        "scenario_id": sid,
+                        "task_id": sid,
                         "check": "schema",
-                        "detail": "prior target_context but prior_answers is empty",
+                        "detail": "prior gold_label but prior_answers is empty",
                     }
                 )
-            if len(gold.get("prior_answers", [])) < 3:
+            if len(reference_answers.get("prior_answers", [])) < 3:
                 fails.append(
                     {
-                        "scenario_id": sid,
+                        "task_id": sid,
                         "check": "schema",
-                        "detail": "prior_answers must include 3+ items (object name, technique, state) — fewer than 3 found",
+                        "detail": "prior_answers must include 3+ items (object name, technique, state) - fewer than 3 found",
                     }
                 )
-        if target == "abstain" and not gold.get("abstain_indicators"):
+        if label == "abstain" and not reference_answers.get("abstain_indicators"):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "abstain target_context but abstain_indicators is empty",
+                    "detail": "abstain gold_label but abstain_indicators is empty",
                 }
             )
-        if target == "clarify" and not gold.get("clarify_indicators"):
+        if label == "clarify" and not reference_answers.get("clarify_indicators"):
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "schema",
-                    "detail": "clarify target_context but clarify_indicators is empty",
+                    "detail": "clarify gold_label but clarify_indicators is empty",
                 }
             )
 
-    # Distribution checks (main subset only).
+    # Distribution checks (main task_set only).
     if enforce_distribution:
-        shift_type_counts = Counter(sc.get("shift_type") for sc in scenarios)
+        shift_type_counts = Counter(sc.get("shift_type") for sc in tasks)
         expected_shift_type_counts = {
             "object_in_hand": 21,
             "object_state": 22,
@@ -422,7 +422,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
             if shift_type_counts[shift_type] != expected_count:
                 fails.append(
                     {
-                        "scenario_id": "<main>",
+                        "task_id": "<main>",
                         "check": "schema",
                         "detail": f"shift_type {shift_type} count {shift_type_counts[shift_type]} does not match expected {expected_count}",
                     }
@@ -434,7 +434,7 @@ def check_3_schema_validation(scenarios, enforce_distribution: bool = True):
 def check_7_lockfile_drift():
     """Check 7: Computed asset hashes match the static MANIFEST.lock.json.
 
-    Catches silent mutations to the scenario set, prompt conditions, or
+    Catches silent mutations to the task set, prompt conditions, or
     judge-prompt template that ship without a coordinated
     benchmark_version bump. To refresh the lockfile after a deliberate
     content change, run ``python scripts/regen_manifest_lock.py``.
@@ -443,7 +443,7 @@ def check_7_lockfile_drift():
     if not LOCKFILE_PATH.exists():
         return [
             {
-                "scenario_id": "<main>",
+                "task_id": "<main>",
                 "check": "lockfile",
                 "detail": (
                     f"missing lockfile at {LOCKFILE_PATH}; run "
@@ -456,7 +456,7 @@ def check_7_lockfile_drift():
     except json.JSONDecodeError as exc:
         return [
             {
-                "scenario_id": "<main>",
+                "task_id": "<main>",
                 "check": "lockfile",
                 "detail": f"lockfile is not valid JSON: {exc}",
             }
@@ -464,7 +464,7 @@ def check_7_lockfile_drift():
 
     # Imports here so the validator runs even when the package import
     # path is not set up (e.g., in a slimmed CI environment that only
-    # checks scenarios). The hash checks above for assets remain the
+    # checks tasks). The hash checks above for assets remain the
     # primary signal even if these imports fail.
     try:
         repo_root = Path(__file__).resolve().parent.parent
@@ -474,7 +474,7 @@ def check_7_lockfile_drift():
     except ImportError as exc:
         return [
             {
-                "scenario_id": "<main>",
+                "task_id": "<main>",
                 "check": "lockfile",
                 "detail": f"could not import benchmark package for lockfile check: {exc}",
             }
@@ -486,14 +486,14 @@ def check_7_lockfile_drift():
     expected = {
         "benchmark_version": BENCHMARK_VERSION,
         "judge_prompt_sha256": hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
-        "scenarios_sha256": _sha(SCENARIOS_PATH),
+        "tasks_sha256": _sha(TASKS_PATH),
         "prompt_conditions_sha256": _sha(PROMPT_CONDITIONS_PATH),
     }
     for key, value in expected.items():
         if lockfile.get(key) != value:
             fails.append(
                 {
-                    "scenario_id": "<main>",
+                    "task_id": "<main>",
                     "check": "lockfile",
                     "detail": (
                         f"{key} mismatch: lockfile={lockfile.get(key)!r}, "
@@ -506,29 +506,31 @@ def check_7_lockfile_drift():
     return fails
 
 
-def check_6_duplication(scenarios):
-    """Check 6: Cross-scenario near-duplication on T2 user + T2 image +
-    (shift_type, target_context, difficulty_tier) signature."""
+def check_6_duplication(tasks):
+    """Check 6: Cross-task near-duplication on T2 user + T2 image +
+    (shift_type, gold_label, difficulty) signature."""
     fails = []
-    seen_t2_user = {}
-    seen_t2_image = {}
-    seen_signatures = Counter()
+    seen_t2_user: dict[str, str] = {}
+    seen_t2_image: dict[str, str] = {}
+    seen_signatures: Counter[
+        tuple[str | None, str | None, str | None, str | None]
+    ] = Counter()
 
-    for sc in scenarios:
-        sid = sc["scenario_id"]
+    for sc in tasks:
+        sid = sc["task_id"]
         t2u = (sc.get("turn_2_user") or "").strip().lower()
-        t2i = (sc.get("turn_2_image") or "").strip().lower()
+        t2i = (sc.get("turn_2_scene_description") or "").strip().lower()
         sig = (
             sc.get("shift_type"),
-            sc.get("target_context"),
-            sc.get("difficulty_tier"),
-            sc.get("activity_domain"),
+            sc.get("gold_label"),
+            sc.get("difficulty"),
+            sc.get("domain"),
         )
 
         if t2u and t2u in seen_t2_user:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "duplication",
                     "detail": f"identical turn_2_user as {seen_t2_user[t2u]}",
                 }
@@ -539,9 +541,9 @@ def check_6_duplication(scenarios):
         if t2i and t2i in seen_t2_image:
             fails.append(
                 {
-                    "scenario_id": sid,
+                    "task_id": sid,
                     "check": "duplication",
-                    "detail": f"identical turn_2_image as {seen_t2_image[t2i]}",
+                    "detail": f"identical turn_2_scene_description as {seen_t2_image[t2i]}",
                 }
             )
         else:
@@ -555,7 +557,7 @@ def check_6_duplication(scenarios):
         if count > 2:
             fails.append(
                 {
-                    "scenario_id": "<main>",
+                    "task_id": "<main>",
                     "check": "duplication",
                     "detail": f"signature {sig} appears {count} times (limit 2)",
                 }
@@ -569,25 +571,25 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    all_records = _load_scenarios_jsonl(SCENARIOS_PATH)
-    main_subset = [r for r in all_records if r.get("subset") == "main"]
+    all_records = _load_tasks_jsonl(TASKS_PATH)
+    main_task_set = [r for r in all_records if r.get("task_set") == "main"]
 
     all_fails = []
-    all_fails.extend(check_1_token_leakage(main_subset))
-    all_fails.extend(check_2_object_name_in_images(main_subset))
-    all_fails.extend(check_3_schema_validation(main_subset, enforce_distribution=True))
-    all_fails.extend(check_6_duplication(main_subset))
+    all_fails.extend(check_1_token_leakage(main_task_set))
+    all_fails.extend(check_2_object_name_in_images(main_task_set))
+    all_fails.extend(check_3_schema_validation(main_task_set, enforce_distribution=True))
+    all_fails.extend(check_6_duplication(main_task_set))
     all_fails.extend(check_7_lockfile_drift())
 
     if args.json:
         print(json.dumps(all_fails, indent=2, ensure_ascii=False))
     else:
         if not all_fails:
-            print(f"All checks passed ({len(main_subset)} scenarios validated).")
+            print(f"All checks passed ({len(main_task_set)} tasks validated).")
         else:
             print(f"{len(all_fails)} validation failure(s):")
             for f in all_fails:
-                print(f"  [{f['check']}] {f['scenario_id']}: {f['detail']}")
+                print(f"  [{f['check']}] {f['task_id']}: {f['detail']}")
 
     return 0 if not all_fails else 1
 
