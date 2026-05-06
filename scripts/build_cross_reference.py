@@ -1,4 +1,4 @@
-"""Generate ``data/scenarios.cross_reference.csv`` from ``scenarios.jsonl``.
+"""Generate ``data/scenarios.cross_reference.csv`` from ``wacb.jsonl``.
 
 A flat per-scenario row of category + attribute columns plus truncated user
 speech. Used to spot near-duplicates and to track distribution targets as
@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCENARIOS_PATH = REPO_ROOT / "data" / "scenarios.jsonl"
+SCENARIOS_PATH = REPO_ROOT / "data" / "wacb.jsonl"
 GRADES_PATH = REPO_ROOT / "data" / "authoring_grades.json"
 OUTPUT_PATH = REPO_ROOT / "data" / "scenarios.cross_reference.csv"
 

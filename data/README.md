@@ -29,7 +29,7 @@ English.
 
 ### Data files
 
-All 70 scenarios live in a single `data/scenarios.jsonl` file
+All 70 scenarios live in a single `data/wacb.jsonl` file
 (one JSON object per line) with inline `gold` labels. Records are
 distinguished by the `subset` field:
 

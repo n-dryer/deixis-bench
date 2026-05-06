@@ -6,7 +6,7 @@ repo root.
 
 ## `validate_scenarios.py`
 
-Runs the programmatic checks against `data/scenarios.jsonl`,
+Runs the programmatic checks against `data/wacb.jsonl`,
 `data/prompt_conditions.json`, and `data/MANIFEST.lock.json`:
 
 - token leakage

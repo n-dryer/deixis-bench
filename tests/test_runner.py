@@ -955,7 +955,7 @@ def test_runtime_data_is_available_as_package_resources() -> None:
     the source-of-truth files byte-for-byte.
     """
     resource_root = files("wearable_assistant_context_bench").joinpath("data")
-    for name in ("config.json", "prompt_conditions.json", "scenarios.jsonl"):
+    for name in ("config.json", "prompt_conditions.json", "wacb.jsonl"):
         packaged = resource_root.joinpath(name)
         source = REPO_ROOT / "data" / name
         assert packaged.is_file(), f"missing packaged runtime data: {name}"

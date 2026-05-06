@@ -235,7 +235,7 @@ manifest fields include:
 - `benchmark_version`: the runner code version
 - `camera_injection`: boolean; always `true`
 - `subset`: `"main"` or `"contrast"`, naming the subset the run evaluated
-- `scenarios_sha256`: hash of `data/scenarios.jsonl`
+- `scenarios_sha256`: hash of `data/wacb.jsonl`
 - `prompt_conditions_sha256`: hash of `data/prompt_conditions.json`
 - `judge_prompt_sha256`: judge prompt identification
 - `candidate_model`, `judge_model`, `judge_family`,

@@ -274,12 +274,12 @@ def sample_trial_factory():
 
 @pytest.fixture(scope="session")
 def scenarios_by_id() -> dict[str, dict]:
-    """Map scenario_id -> scenario dict, loaded from data/scenarios.jsonl.
+    """Map scenario_id -> scenario dict, loaded from data/wacb.jsonl.
 
     Used by audit-rubric tests that exercise rules against real bank
     entries instead of inline fixtures.
     """
-    scenarios_path = ROOT / "data" / "scenarios.jsonl"
+    scenarios_path = ROOT / "data" / "wacb.jsonl"
     out: dict[str, dict] = {}
     with scenarios_path.open("r", encoding="utf-8") as f:
         for raw in f:

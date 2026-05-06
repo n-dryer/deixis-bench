@@ -77,7 +77,7 @@ def _data_resource(filename: str) -> ResourcePath:
     return PACKAGED_DATA_DIR.joinpath(filename)
 
 
-SCENARIOS_PATH = _data_resource("scenarios.jsonl")
+SCENARIOS_PATH = _data_resource("wacb.jsonl")
 PROMPT_CONDITIONS_PATH = _data_resource("prompt_conditions.json")
 DEFAULT_CONFIG_PATH = _data_resource("config.json")
 
@@ -154,7 +154,7 @@ class AnswerSet:
 
 @dataclass
 class Scenario:
-    """One scenario record loaded from ``scenarios.jsonl``.
+    """One scenario record loaded from ``wacb.jsonl``.
 
     JSON line schema (one object per line):
         scenario_id: str
@@ -207,7 +207,7 @@ class Scenario:
 def load_scenarios(
     path: ResourcePath = SCENARIOS_PATH, subset: str | None = None
 ) -> list[Scenario]:
-    """Load scenarios from ``scenarios.jsonl``, optionally filtered by subset.
+    """Load scenarios from ``wacb.jsonl``, optionally filtered by subset.
 
     Each line is one JSON object. When ``subset`` is non-None, only
     records whose ``subset`` field matches are returned.

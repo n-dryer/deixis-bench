@@ -1,6 +1,6 @@
 # Schema Reference
 
-Field definitions for `data/scenarios.jsonl` (one JSON
+Field definitions for `data/wacb.jsonl` (one JSON
 object per line, with inline gold labels under the `gold` field).
 
 The benchmark uses a split between what the candidate model sees and what the judge sees. The candidate model sees two
@@ -14,7 +14,7 @@ For the rules that govern how each field is written, see
 
 ---
 
-## scenarios.jsonl
+## wacb.jsonl
 
 JSON Lines: one scenario object per line.
 
