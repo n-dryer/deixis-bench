@@ -59,7 +59,7 @@ def _is_transient_error(exc: BaseException) -> bool:
 # This keeps the CLI ergonomic for OpenAI-compatible endpoints whose
 # default LiteLLM provider points at the wrong region or schema.
 _CUSTOM_ENDPOINT_ROUTES: dict[str, tuple[str, str, str]] = {
-    # Alibaba Cloud Model Studio — Singapore region (DashScope
+    # Alibaba Cloud Model Studio - Singapore region (DashScope
     # International). OpenAI-compatible endpoint; key in DASHSCOPE_API_KEY.
     "dashscope-intl/": (
         "openai/",

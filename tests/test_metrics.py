@@ -23,20 +23,19 @@ from wearable_assistant_context_bench.aggregation import (
     clarify_rate,
     class_recall_under_condition,
     class_recall_with_ci_under_condition,
-    code_judge_disagreement_by_scenario,
+    code_judge_disagreement_by_task,
     cohens_kappa,
-    contrast_pair_consistency,
     coverage_rate,
     inter_judge_agreement_summary,
-    inter_judge_disagreement_by_scenario,
+    inter_judge_disagreement_by_task,
     mean_recall_under_condition,
     mean_recall_with_bootstrap_ci_under_condition,
     mean_recall_with_ci_under_condition,
     per_policy_pass_rate_by_condition,
     recall_by_shift_type,
-    recall_by_subset,
-    scenario_by_condition_matrix,
+    recall_by_task_set,
     simulated_repair_rate_by_condition,
+    task_by_condition_matrix,
     wilson_interval,
 )
 from wearable_assistant_context_bench.rendering import render_findings_markdown
@@ -50,7 +49,7 @@ from wearable_assistant_context_bench.scoring import (
 from wearable_assistant_context_bench.statistics import bootstrap_ci
 
 # ===========================================================================
-# core.scoring — per-trial code signals
+# core.scoring - per-trial code signals
 # ===========================================================================
 
 
@@ -220,38 +219,36 @@ def test_score_response_indicators_default_to_empty() -> None:
 
 
 # ===========================================================================
-# core.report — aggregation, recall metrics, manifest rendering
+# core.report - aggregation, recall metrics, manifest rendering
 # ===========================================================================
 
 
 def _trial(
     *,
-    scenario_id: str,
+    task_id: str,
     condition: str,
     trial: int,
-    target_context: str,
+    gold_label: str,
     turn_2_passed: bool,
     turn_2_judge_label: str | None = None,
     turn_2_code_signals: dict | None = None,
     turn_3_repair_attempted: bool = False,
     turn_3_repair_passed: bool | None = None,
-    subset: str = "main",
-    pair_id: str | None = None,
+    task_set: str = "main",
     shift_type: str = "object_in_hand",
 ) -> dict:
     return {
-        "scenario_id": scenario_id,
-        "subset": subset,
-        "pair_id": pair_id,
+        "task_id": task_id,
+        "task_set": task_set,
         "shift_type": shift_type,
         "condition": condition,
         "trial": trial,
-        "target_context": target_context,
+        "gold_label": gold_label,
         "turn_2_passed": turn_2_passed,
         "turn_2_judge_label": (
             turn_2_judge_label
             if turn_2_judge_label is not None
-            else (target_context if turn_2_passed else "abstain")
+            else (gold_label if turn_2_passed else "abstain")
         ),
         "turn_2_code_signals": turn_2_code_signals or {},
         "turn_3_repair_attempted": turn_3_repair_attempted,
@@ -260,53 +257,53 @@ def _trial(
 
 
 def _fixture_results() -> list[dict]:
-    """Mini fixture: one ``prior`` scenario (sc-03) and three ``current``
-    scenarios (sc-01, sc-02, sc-04). Two trials per cell. All main subset."""
+    """Mini fixture: one ``prior`` task (task-003) and three ``current``
+    tasks (task-001, task-002, task-004). Two trials per cell. All main task_set."""
     results: list[dict] = []
-    prior_cells = [
+    prior_cells: list[tuple[str, list[bool], list[bool | None]]] = [
         ("baseline", [False, False], [True, False]),
-        ("condition_a", [True, False], [None, True]),
-        ("condition_b", [True, True], [None, None]),
+        ("context_selection_instruction", [True, False], [None, True]),
+        ("pre_answer_context_scaffold", [True, True], [None, None]),
     ]
     for condition, passes, repairs in prior_cells:
         for i, (passed, repaired) in enumerate(zip(passes, repairs, strict=False)):
             results.append(
                 _trial(
-                    scenario_id="sc-03",
+                    task_id="task-003",
                     condition=condition,
                     trial=i,
-                    target_context="prior",
+                    gold_label="prior",
                     turn_2_passed=passed,
                     turn_3_repair_attempted=(not passed),
                     turn_3_repair_passed=repaired,
                 )
             )
     current_plan = {
-        "sc-01": {
+        "task-001": {
             "baseline": [True, True],
-            "condition_a": [True, True],
-            "condition_b": [True, True],
+            "context_selection_instruction": [True, True],
+            "pre_answer_context_scaffold": [True, True],
         },
-        "sc-02": {
+        "task-002": {
             "baseline": [True, False],
-            "condition_a": [True, True],
-            "condition_b": [True, True],
+            "context_selection_instruction": [True, True],
+            "pre_answer_context_scaffold": [True, True],
         },
-        "sc-04": {
+        "task-004": {
             "baseline": [False, True],
-            "condition_a": [True, False],
-            "condition_b": [True, True],
+            "context_selection_instruction": [True, False],
+            "pre_answer_context_scaffold": [True, True],
         },
     }
-    for scenario_id, conds in current_plan.items():
+    for task_id, conds in current_plan.items():
         for condition, passes in conds.items():
             for i, passed in enumerate(passes):
                 results.append(
                     _trial(
-                        scenario_id=scenario_id,
+                        task_id=task_id,
                         condition=condition,
                         trial=i,
-                        target_context="current",
+                        gold_label="current",
                         turn_2_passed=passed,
                         turn_3_repair_attempted=(not passed),
                         turn_3_repair_passed=(False if not passed else None),
@@ -333,10 +330,10 @@ def test_per_policy_grid_prior_rates_reflect_fixture() -> None:
     grid = per_policy_pass_rate_by_condition(_fixture_results())
     assert grid["prior"]["baseline"].passed == 0
     assert grid["prior"]["baseline"].total == 2
-    assert grid["prior"]["condition_a"].passed == 1
-    assert grid["prior"]["condition_a"].total == 2
-    assert grid["prior"]["condition_b"].passed == 2
-    assert grid["prior"]["condition_b"].total == 2
+    assert grid["prior"]["context_selection_instruction"].passed == 1
+    assert grid["prior"]["context_selection_instruction"].total == 2
+    assert grid["prior"]["pre_answer_context_scaffold"].passed == 2
+    assert grid["prior"]["pre_answer_context_scaffold"].total == 2
 
 
 def test_class_recall_under_baseline() -> None:
@@ -355,10 +352,10 @@ def test_mean_recall_under_baseline_is_mean_of_class_recalls() -> None:
 def test_mean_recall_returns_none_when_a_class_is_empty() -> None:
     only_current = [
         _trial(
-            scenario_id="sc-01",
+            task_id="task-001",
             condition="baseline",
             trial=0,
-            target_context="current",
+            gold_label="current",
             turn_2_passed=True,
         )
     ]
@@ -368,18 +365,18 @@ def test_mean_recall_returns_none_when_a_class_is_empty() -> None:
 def test_mean_recall_penalizes_clarify_abstain_as_wrong() -> None:
     results = [
         _trial(
-            scenario_id="sc-03",
+            task_id="task-003",
             condition="baseline",
             trial=0,
-            target_context="prior",
+            gold_label="prior",
             turn_2_passed=False,
             turn_2_judge_label="clarify",
         ),
         _trial(
-            scenario_id="sc-04",
+            task_id="task-004",
             condition="baseline",
             trial=0,
-            target_context="current",
+            gold_label="current",
             turn_2_passed=True,
         ),
     ]
@@ -389,14 +386,14 @@ def test_mean_recall_penalizes_clarify_abstain_as_wrong() -> None:
     assert mean_recall_under_condition(results, "baseline") == pytest.approx(0.5)
 
 
-def test_recall_by_subset_splits_main_and_contrast() -> None:
+def test_recall_by_task_set_groups_declared_sets() -> None:
     results = _fixture_results()
-    # Mark a few trials as contrast pack.
+    # Mark a few trials as a second task set to verify grouping behavior.
     for i in range(0, 4):
-        results[i]["subset"] = "contrast"
-    by_pack = recall_by_subset(results, "baseline")
-    assert "main" in by_pack
-    assert "contrast" in by_pack
+        results[i]["task_set"] = "diagnostic"
+    by_task_set = recall_by_task_set(results, "baseline")
+    assert "main" in by_task_set
+    assert "diagnostic" in by_task_set
 
 
 def test_recall_by_shift_type_buckets_correctly() -> None:
@@ -409,49 +406,23 @@ def test_recall_by_shift_type_buckets_correctly() -> None:
     assert "object_state" in out
 
 
-def test_contrast_pair_consistency_returns_note_when_no_pair_ids() -> None:
-    results = _fixture_results()
-    payload = contrast_pair_consistency(results, "baseline")
-    assert payload["pairs_evaluated"] == 0
-    assert "no pair_id metadata" in payload["note"]
-
-
-def test_contrast_pair_consistency_counts_pairs_when_metadata_present() -> None:
-    results = []
-    for sid, passed in [("adv-01", True), ("adv-02", False)]:
-        results.append(
-            _trial(
-                scenario_id=sid,
-                condition="baseline",
-                trial=0,
-                target_context="current",
-                turn_2_passed=passed,
-                subset="contrast",
-                pair_id="pair-1",
-            )
-        )
-    payload = contrast_pair_consistency(results, "baseline")
-    assert payload["pairs_evaluated"] == 1
-    assert payload["consistency_rate"] == 0.0
-
-
 def test_clarify_and_abstain_and_coverage_rates() -> None:
     results = [
         _trial(
-            scenario_id=f"sc-{i:02d}",
+            task_id=f"task-{i:03d}",
             condition="baseline",
             trial=0,
-            target_context="current",
+            gold_label="current",
             turn_2_passed=False,
             turn_2_judge_label="clarify",
         )
         for i in range(3)
     ] + [
         _trial(
-            scenario_id="sc-99",
+            task_id="task-099",
             condition="baseline",
             trial=0,
-            target_context="current",
+            gold_label="current",
             turn_2_passed=True,
         )
     ]
@@ -467,17 +438,17 @@ def test_simulated_repair_rate_uses_failures_as_denominator() -> None:
     repair = simulated_repair_rate_by_condition(_fixture_results())
     assert repair["baseline"].failures == 4
     assert repair["baseline"].repaired == 1
-    assert repair["condition_b"].failures == 0
-    assert repair["condition_b"].rate is None
+    assert repair["pre_answer_context_scaffold"].failures == 0
+    assert repair["pre_answer_context_scaffold"].rate is None
 
 
-def test_code_judge_disagreement_counts_per_scenario() -> None:
+def test_code_judge_disagreement_counts_per_task() -> None:
     results = [
         {
-            "scenario_id": "sc-03",
+            "task_id": "task-003",
             "condition": "baseline",
             "trial": 0,
-            "target_context": "prior",
+            "gold_label": "prior",
             "turn_2_passed": False,
             "turn_2_judge_label": "abstain",
             "turn_2_code_signals": {
@@ -491,10 +462,10 @@ def test_code_judge_disagreement_counts_per_scenario() -> None:
             "turn_3_repair_passed": None,
         },
         {
-            "scenario_id": "sc-04",
+            "task_id": "task-004",
             "condition": "baseline",
             "trial": 0,
-            "target_context": "current",
+            "gold_label": "current",
             "turn_2_passed": True,
             "turn_2_judge_label": "current",
             "turn_2_code_signals": {
@@ -508,14 +479,14 @@ def test_code_judge_disagreement_counts_per_scenario() -> None:
             "turn_3_repair_passed": None,
         },
     ]
-    disagreements = code_judge_disagreement_by_scenario(results)
-    assert disagreements["sc-03"] == 1
-    assert disagreements["sc-04"] == 0
+    disagreements = code_judge_disagreement_by_task(results)
+    assert disagreements["task-003"] == 1
+    assert disagreements["task-004"] == 0
 
 
-def test_scenario_matrix_preserves_trial_order() -> None:
-    matrix = scenario_by_condition_matrix(_fixture_results())
-    trials = matrix["sc-03"]["baseline"]
+def test_task_matrix_preserves_trial_order() -> None:
+    matrix = task_by_condition_matrix(_fixture_results())
+    trials = matrix["task-003"]["baseline"]
     assert [entry["trial"] for entry in trials] == [0, 1]
     assert trials[0]["turn_3_repair_passed"] is True
     assert trials[1]["turn_3_repair_passed"] is False
@@ -524,15 +495,15 @@ def test_scenario_matrix_preserves_trial_order() -> None:
 def test_render_findings_markdown_shape() -> None:
     output = render_findings_markdown(
         _fixture_results(),
-        scenario_policies={
-            "sc-01": "current",
-            "sc-02": "current",
-            "sc-03": "prior",
-            "sc-04": "current",
+        task_policies={
+            "task-001": "current",
+            "task-002": "current",
+            "task-003": "prior",
+            "task-004": "current",
         },
         manifest={
             "benchmark_version": "0.1.0a0",
-            "scenarios_sha256": "abc",
+            "tasks_sha256": "abc",
             "prompt_conditions_sha256": "ghi",
             "candidate_model": "claude-sonnet-4-6",
             "judge_model": "gemini-2.5-flash",
@@ -547,12 +518,11 @@ def test_render_findings_markdown_shape() -> None:
     assert BENCHMARK_LABEL in output
     assert "Benchmark summary" in output
     assert "Per-class pass rate" in output
-    assert "Per-subset recall" in output
+    assert "Per task-set recall" in output
     assert "Per shift-type recall" in output
-    assert "Contrast pair consistency" in output
     assert "Hedging behavior" in output
     assert "Code-judge disagreement" in output
-    assert "Scenario-by-condition matrix" in output
+    assert "Task-by-condition matrix" in output
     assert "Reproducibility manifest" in output
     assert "Primary score" in output
     assert "class recall" in output
@@ -562,7 +532,7 @@ def test_render_findings_markdown_shape() -> None:
 def test_render_findings_markdown_emits_complete_manifest() -> None:
     manifest = {
         "benchmark_version": "0.1.0a0",
-        "scenarios_sha256": "sha-scenarios",
+        "tasks_sha256": "sha-tasks",
         "prompt_conditions_sha256": "sha-prompt-conditions",
         "candidate_model": "claude-sonnet-4-6",
         "judge_model": "gemini-2.5-flash",
@@ -597,8 +567,8 @@ def test_render_findings_markdown_manifest_fills_missing_keys() -> None:
     for key in REQUIRED_MANIFEST_KEYS:
         assert key in payload
     warnings = payload["manifest_warnings"]
-    assert any("scenarios_sha256" in w for w in warnings)
-    assert payload["scenarios_sha256"] is None
+    assert any("tasks_sha256" in w for w in warnings)
+    assert payload["tasks_sha256"] is None
 
 
 def test_wilson_interval_zero_n_returns_none() -> None:
@@ -628,20 +598,20 @@ def test_class_recall_with_ci_returns_triples_or_none() -> None:
     for _ in range(5):
         results.append(
             _trial(
-                scenario_id="sc-c",
+                task_id="task-current",
                 condition="baseline",
                 trial=0,
-                target_context="current",
+                gold_label="current",
                 turn_2_passed=True,
             )
         )
     for _ in range(5):
         results.append(
             _trial(
-                scenario_id="sc-p",
+                task_id="task-prior",
                 condition="baseline",
                 trial=0,
-                target_context="prior",
+                gold_label="prior",
                 turn_2_passed=False,
             )
         )
@@ -653,10 +623,10 @@ def test_class_recall_with_ci_returns_triples_or_none() -> None:
 def test_mean_recall_with_ci_handles_missing_class() -> None:
     results = [
         _trial(
-            scenario_id="sc-c",
+            task_id="task-current",
             condition="baseline",
             trial=0,
-            target_context="current",
+            gold_label="current",
             turn_2_passed=True,
         )
     ]
@@ -670,20 +640,20 @@ def test_mean_recall_bootstrap_ci_brackets_normal_ci() -> None:
     for _ in range(20):
         results.append(
             _trial(
-                scenario_id="sc-c",
+                task_id="task-current",
                 condition="baseline",
                 trial=0,
-                target_context="current",
+                gold_label="current",
                 turn_2_passed=True,
             )
         )
     for i in range(20):
         results.append(
             _trial(
-                scenario_id="sc-p",
+                task_id="task-prior",
                 condition="baseline",
                 trial=0,
-                target_context="prior",
+                gold_label="prior",
                 turn_2_passed=(i < 10),
             )
         )
@@ -743,14 +713,14 @@ def test_inter_judge_agreement_summary_with_ranking_labels() -> None:
     assert -1.0 <= summary["kappa"] <= 1.0
 
 
-def test_inter_judge_disagreement_by_scenario_counts_only_paired_trials() -> None:
+def test_inter_judge_disagreement_by_task_counts_only_paired_trials() -> None:
     results = _fixture_results()
     target_idx = 0
     results[target_idx]["turn_2_ranking_judge_label"] = (
         "prior" if results[target_idx]["turn_2_judge_label"] != "prior" else "current"
     )
-    counts = inter_judge_disagreement_by_scenario(results)
-    assert counts.get(results[target_idx]["scenario_id"]) == 1
+    counts = inter_judge_disagreement_by_task(results)
+    assert counts.get(results[target_idx]["task_id"]) == 1
     assert sum(counts.values()) == 1
 
 

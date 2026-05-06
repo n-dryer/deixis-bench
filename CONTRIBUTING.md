@@ -15,14 +15,14 @@ quality, or domain expertise are not.
 The following stay stable across patch releases so cross-model
 comparisons remain valid:
 
-- `data/wacb.jsonl`: scenario text + inline gold labels
+- `data/tasks.jsonl`: task text + inline reference_answers labels
 - `data/prompt_conditions.json`: prompt conditions
 - The four judge labels (`current`, `prior`, `clarify`, `abstain`)
 - The primary scoring rule: `mean(current_recall, prior_recall)`
   under `baseline` (class recall, not overall accuracy)
 - The default comparison condition (`baseline`)
 
-Edits that change scenario meaning, answer-key vocabulary, prompt
+Edits that change task meaning, answer-key vocabulary, prompt
 text, or scoring semantics are out of scope after the tag.
 
 ## What is welcome at any time
@@ -59,12 +59,12 @@ If your adapter is for a routing layer that supports multiple
 families (like LiteLLM), keep family detection in
 `infer_candidate_family` and reuse the existing `LiteLLMJudgeAdapter`.
 
-## How to write a scenario
+## How to write a task
 
-Scenarios are written from scratch following the rules in
-[`docs/scenario_authoring_rules.md`](docs/scenario_authoring_rules.md).
+Tasks are written from scratch following the rules in
+[`docs/task_authoring.md`](docs/task_authoring.md).
 That document is the source of truth for user-message,
-scene-description, and gold-answer rules, and it includes the full
+scene-description, and reference-answer rules, and it includes the full
 validation checklist.
 
 Quick summary:
@@ -76,34 +76,34 @@ Quick summary:
   No object names, no functional labels, no technique evaluation.
   Detailed enough that a fresh reader can identify the object with
   high confidence.
-- **Gold answers** (`gold.*`): judge-only. Object names permitted.
+- **Gold answers** (`reference_answers.*`): judge-only. Object names permitted.
   Each `current_answers` and `prior_answers` list must cover three
   vocabulary categories: object name, technique vocabulary, state
   descriptors.
 
-New scenarios are not accepted into the frozen main subset.
+New tasks are not accepted into the frozen main task_set.
 Authoring rules are published as contributor reference.
 
 ## Validation
 
-Before submitting any change to scenarios or answer keys, run:
+Before submitting any change to tasks or answer keys, run:
 
 ```bash
-python scripts/validate_scenarios.py
+python scripts/validate_tasks.py
 ```
 
 This runs five programmatic checks (token leakage, object name
-leakage, schema validation, cross-scenario duplication, and lockfile
-drift) over the scenario set. Two additional semantic checks
+leakage, schema validation, cross-task duplication, and lockfile
+drift) over the task set. Two additional semantic checks
 (human identification of image descriptions, semantic leakage
-isolation test) run during scenario authoring rather than in CI.
+isolation test) run during task authoring rather than in CI.
 
 The full 10-point validation checklist is in
-[`docs/scenario_authoring_rules.md`](docs/scenario_authoring_rules.md).
+[`docs/task_authoring.md`](docs/task_authoring.md).
 
 ### Static asset lockfile
 
-`data/MANIFEST.lock.json` pins SHA256 hashes of the scenario set,
+`data/MANIFEST.lock.json` pins SHA256 hashes of the task set,
 prompt conditions, and the judge-prompt template alongside
 `BENCHMARK_VERSION`. The validator's lockfile check fails if any of
 those drift. After a content change (with a corresponding
@@ -141,7 +141,7 @@ Every PR must pass:
 
 ```bash
 python -m pytest tests/ -q
-python scripts/validate_scenarios.py
+python scripts/validate_tasks.py
 ```
 
 The test suite stubs candidate models and the judge so it works

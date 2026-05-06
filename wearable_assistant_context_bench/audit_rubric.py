@@ -1,9 +1,9 @@
-"""Rule-based audit rubric for the scenario test bank.
+"""Rule-based audit rubric for the task test bank.
 
-Infers ``shift_type``, ``target_context``, and ``difficulty_tier`` from
-the script content (turn images, user speech, gold answers,
-context_image) without reading the metadata being audited. The
-intended caller is ``scripts/audit_scenarios.py``, which writes a diff
+Infers ``shift_type``, ``gold_label``, and ``difficulty`` from
+the script content (turn images, user speech, reference answers,
+pre_turn_context_scene_description) without reading the metadata being audited. The
+intended caller is ``scripts/audit_tasks.py``, which writes a diff
 CSV comparing audit verdicts against the metadata.
 
 Pure functions; no I/O.
@@ -18,9 +18,9 @@ from difflib import SequenceMatcher
 
 
 def _ascii_fold(text: str) -> str:
-    """Strip diacritics so 'sauté' matches 'saute' in cue lists.
+    """Strip diacritics so 'saute' variants match cue lists.
 
-    Without this, gold answer tokens with accented characters slip past
+    Without this, reference answer tokens with accented characters slip past
     the substring tests in ``_SEQUENTIAL_PAIRS`` and similar.
     """
     return "".join(
@@ -51,21 +51,21 @@ def char_overlap_ratio(a: str, b: str) -> float:
     """Character-level similarity via difflib's longest-matching-block ratio.
 
     Used to gauge whether T1 and T2 image descriptions are
-    near-identical (subtle scene contrast → harder scenario).
+    near-identical (subtle scene contrast means a harder task).
     """
     if not a and not b:
         return 0.0
     return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
 
 
-def _gold_field(gold: dict | None, key: str) -> list[str]:
-    if not gold:
+def _reference_answers_field(reference_answers: dict | None, key: str) -> list[str]:
+    if not reference_answers:
         return []
-    value = gold.get(key)
+    value = reference_answers.get(key)
     return value if isinstance(value, list) else []
 
 
-# --- target_context inference ---------------------------------------------
+# --- gold_label inference ---------------------------------------------
 
 
 _PRIOR_DEIXIS_CUES = (
@@ -84,23 +84,23 @@ _PRIOR_DEIXIS_CUES = (
 )
 
 
-def audit_target_context(gold: dict | None, t2_user: str) -> str:
-    """Infer ``target_context`` from ``gold`` indicator-list shape, with T2
+def audit_gold_label(reference_answers: dict | None, t2_user: str) -> str:
+    """Infer ``gold_label`` from ``reference_answers`` indicator-list shape, with T2
     user phrasing breaking the tie when both ``current_answers`` and
     ``prior_answers`` are populated.
 
     Rule order (first match wins):
-    1. ``clarify_indicators`` non-empty → ``clarify``
-    2. ``abstain_indicators`` non-empty → ``abstain``
-    3. only ``current_answers`` non-empty → ``current``
-    4. only ``prior_answers`` non-empty → ``prior``
+    1. ``clarify_indicators`` non-empty -> ``clarify``
+    2. ``abstain_indicators`` non-empty -> ``abstain``
+    3. only ``current_answers`` non-empty -> ``current``
+    4. only ``prior_answers`` non-empty -> ``prior``
     5. both populated: ``prior`` if T2 user uses past-reference deixis,
        else ``current``
     """
-    clarify = _gold_field(gold, "clarify_indicators")
-    abstain = _gold_field(gold, "abstain_indicators")
-    current = _gold_field(gold, "current_answers")
-    prior = _gold_field(gold, "prior_answers")
+    clarify = _reference_answers_field(reference_answers, "clarify_indicators")
+    abstain = _reference_answers_field(reference_answers, "abstain_indicators")
+    current = _reference_answers_field(reference_answers, "current_answers")
+    prior = _reference_answers_field(reference_answers, "prior_answers")
 
     if clarify:
         return "clarify"
@@ -121,14 +121,14 @@ def audit_target_context(gold: dict | None, t2_user: str) -> str:
 # --- shift_type rules ------------------------------------------------------
 
 
-# Screen_content scenarios in the bank universally describe the screen
+# Screen_content tasks in the bank universally describe the screen
 # as the focal element with phrases like "backlit display", "screen
 # showing", "the display now showing", "compose window", or "speech
 # bubbles". Bare "display" / "monitor" appear too often as peripheral
 # scene elements (a tuner clip-on display, a rear camera display) to be
 # usable cues, so the list below requires more specific phrasing.
 _SCREEN_CUES = (
-    "backlit",  # canonical descriptor in screen_content scenarios
+    "backlit",  # canonical descriptor in screen_content tasks
     "screen showing",
     "screen now",
     "the screen",
@@ -141,10 +141,9 @@ _SCREEN_CUES = (
 )
 
 # Strict absent_referent T2 USER cues. The phrases here picked out
-# every absent_referent scenario in the bank (sc-38..sc-42, adv-20,
-# sc-121..sc-135, sc-126..sc-128). Conservative on purpose: object_state
-# scenarios use "this" / "the original X" to ask about the present
-# object's prior state; absent_referent scenarios use "that one" /
+# every absent_referent task in the bank. Conservative on purpose: object_state
+# tasks use "this" / "the original X" to ask about the present
+# object's prior state; absent_referent tasks use "that one" /
 # "that thing" / "the [printing|label|...]" to ask about a removed
 # entity.
 _ABSENT_T2_USER_CUES = (
@@ -221,11 +220,11 @@ _STATE_CHANGE_CUES = (
 )
 
 # Activity-pair vocabulary. Each pair is (prior_activity_word,
-# current_activity_word) — distinct activities, not state transitions.
-# Excluded on purpose: ("rough", "smooth"), since sanding rough → smooth
+# current_activity_word) - distinct activities, not state transitions.
+# Excluded on purpose: ("rough", "smooth"), since sanding rough -> smooth
 # is a state transition within the same activity (object_state, not
 # sequential_task). Add new pairs here as the bank grows; pairs are
-# substring-matched against joined gold answer text.
+# substring-matched against joined reference answer text.
 _SEQUENTIAL_PAIRS = (
     ("sand", "stain"),
     ("sand", "finish"),
@@ -293,7 +292,7 @@ def _starts_same(text: str) -> bool:
 
 def _matches_any(text: str, cues: Iterable[str]) -> str | None:
     """Return the first matching cue, or None. Substring match against an
-    ASCII-folded, lowercased text (so cues match 'sauté' as 'saute')."""
+    ASCII-folded, lowercased text."""
     lowered = _ascii_fold(text or "").lower()
     for cue in cues:
         if cue in lowered:
@@ -301,7 +300,7 @@ def _matches_any(text: str, cues: Iterable[str]) -> str | None:
     return None
 
 
-def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
+def audit_shift_type(task: dict) -> tuple[str, list[str]]:
     """Infer ``shift_type`` from the script. Returns ``(label, signals)``
     where ``signals`` is the list of rule traces that fired.
 
@@ -311,20 +310,20 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
     """
     signals: list[str] = []
 
-    t1i = scenario.get("turn_1_image") or ""
-    t2i = scenario.get("turn_2_image") or ""
-    t2u = scenario.get("turn_2_user") or ""
-    ctx_img = scenario.get("context_image")
-    gold = scenario.get("gold") or {}
+    t1i = task.get("turn_1_scene_description") or ""
+    t2i = task.get("turn_2_scene_description") or ""
+    t2u = task.get("turn_2_user") or ""
+    ctx_img = task.get("pre_turn_context_scene_description")
+    reference_answers = task.get("reference_answers") or {}
 
-    # Rule 1: cross_session_reference — context_image is non-null.
-    # The schema invariant guarantees this fires iff the scenario was
+    # Rule 1: cross_session_reference - pre_turn_context_scene_description is non-null.
+    # The schema invariant guarantees this fires iff the task was
     # authored as cross_session_reference.
     if ctx_img:
-        signals.append("rule_1_cross_session_reference: context_image is non-null")
+        signals.append("rule_1_cross_session_reference: pre_turn_context_scene_description is non-null")
         return "cross_session_reference", signals
 
-    # Rule 2: screen_content — both turns describe a screen surface.
+    # Rule 2: screen_content - both turns describe a screen surface.
     t1_screen = _matches_any(t1i, _SCREEN_CUES)
     t2_screen = _matches_any(t2i, _SCREEN_CUES)
     if t1_screen and t2_screen:
@@ -333,7 +332,7 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
         )
         return "screen_content", signals
 
-    # Rule 3: absent_referent — T2 user uses past-reference deixis on a
+    # Rule 3: absent_referent - T2 user uses past-reference deixis on a
     # removed entity. Image cues alone are too noisy ("no longer
     # reflective", "no longer flowing", and similar appear in
     # object_state state transitions), so this rule is anchored on T2
@@ -343,8 +342,8 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
         signals.append(f"rule_3_absent_referent: T2 user cue {t2u_absent!r}")
         return "absent_referent", signals
 
-    # Rule 4: object_in_hand — hand cues in BOTH turns.
-    # Placed before location so low-Jaccard hand-vs-hand scenarios route
+    # Rule 4: object_in_hand - hand cues in BOTH turns.
+    # Placed before location so low-Jaccard hand-vs-hand tasks route
     # correctly. (Hand scenes often share little vocabulary across turns.)
     t1_hand = _matches_any(t1i, _HAND_CUES)
     t2_hand = _matches_any(t2i, _HAND_CUES)
@@ -354,23 +353,23 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
         )
         return "object_in_hand", signals
 
-    # Rule 5: sequential_task — a known activity-transition pair appears
-    # across prior→current gold (e.g. sand → stain, chop → saute).
+    # Rule 5: sequential_task - a known activity-transition pair appears
+    # across prior/current reference_answers (e.g. sand -> stain, chop -> saute).
     # Fires regardless of whether T2 starts with 'Same', because the
-    # bank includes sequential scenarios where the whole work-station
-    # changes (sc-22: cutting board → pan on stove).
-    prior_text = " ".join(_gold_field(gold, "prior_answers")).lower()
-    current_text = " ".join(_gold_field(gold, "current_answers")).lower()
+    # bank includes sequential tasks where the whole work-station
+    # changes (task-022: cutting board -> pan on stove).
+    prior_text = " ".join(_reference_answers_field(reference_answers, "prior_answers")).lower()
+    current_text = " ".join(_reference_answers_field(reference_answers, "current_answers")).lower()
     for prior_word, current_word in _SEQUENTIAL_PAIRS:
         if prior_word in prior_text and current_word in current_text:
             signals.append(
-                f"rule_5_sequential_task: gold pair {prior_word!r} -> {current_word!r}"
+                f"rule_5_sequential_task: reference_answers pair {prior_word!r} -> {current_word!r}"
             )
             return "sequential_task", signals
 
-    # Rule 6: location — T2 image does NOT open with 'Same'/'The same'
+    # Rule 6: location - T2 image does NOT open with 'Same'/'The same'
     # anchor AND T1/T2 word-Jaccard is low, meaning the scene vocabulary
-    # changed wholesale. Comes after sequential_task so chop → saute
+    # changed wholesale. Comes after sequential_task so chop -> saute
     # (low-Jaccard but still a task transition) routes correctly.
     t1_tokens = tokenize(t1i)
     t2_tokens = tokenize(t2i)
@@ -381,32 +380,32 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
         )
         return "location", signals
 
-    # Rule 7: object_in_view — T2 starts 'Same'/'The same' AND has a
+    # Rule 7: object_in_view - T2 starts 'Same'/'The same' AND has a
     # camera/attention shift cue.
     view_cue = _matches_any(t2i, _VIEW_SHIFT_CUES)
     if _starts_same(t2i) and view_cue:
         signals.append(f"rule_7_object_in_view: T2 view-shift cue {view_cue!r}")
         return "object_in_view", signals
 
-    # Rule 8: sequential_task — when gold prior/current are both empty
-    # (target is clarify or abstain, no specific vocabulary anchored),
+    # Rule 8: sequential_task - when reference_answers prior/current are both empty
+    # (gold_label is clarify or abstain, no specific vocabulary anchored),
     # the discriminating signal is 'Same' + low T1/T2 Jaccard. Empty
-    # gold rules out object_state (which always describes prior and
+    # reference_answers rules out object_state (which always describes prior and
     # current state vocabulary); low Jaccard is consistent with a new
-    # tool/operation introduced in T2 (sequential median ≈ 0.20 vs
-    # object_in_view ≈ 0.30, object_state ≈ 0.32).
-    has_gold_pc = bool(_gold_field(gold, "prior_answers")) or bool(
-        _gold_field(gold, "current_answers")
+    # tool/operation introduced in T2 (sequential median about 0.20 vs
+    # object_in_view about 0.30, object_state about 0.32).
+    has_reference_answers_pc = bool(_reference_answers_field(reference_answers, "prior_answers")) or bool(
+        _reference_answers_field(reference_answers, "current_answers")
     )
-    if _starts_same(t2i) and not has_gold_pc and image_jaccard < 0.25:
+    if _starts_same(t2i) and not has_reference_answers_pc and image_jaccard < 0.25:
         signals.append(
-            f"rule_8_sequential_task: 'Same' anchor + empty gold + low Jaccard={image_jaccard:.2f}"
+            f"rule_8_sequential_task: 'Same' anchor + empty reference_answers + low Jaccard={image_jaccard:.2f}"
         )
         return "sequential_task", signals
 
-    # Rule 9: object_state — default for 'Same X'/'The same X' that
+    # Rule 9: object_state - default for 'Same X'/'The same X' that
     # didn't match sequential or view-shift. Most 'Same'-anchored
-    # scenarios are state changes (paint drying, dough rising, ink
+    # tasks are state changes (paint drying, dough rising, ink
     # curing). The high-Jaccard case (T2 doesn't start with 'Same' but
     # shares scene vocabulary with T1) also lands here.
     if _starts_same(t2i):
@@ -418,7 +417,7 @@ def audit_shift_type(scenario: dict) -> tuple[str, list[str]]:
         )
         return "object_state", signals
 
-    # Last-resort fallback for unanchored T2 with mid-Jaccard — treat as
+    # Last-resort fallback for unanchored T2 with mid-Jaccard - treat as
     # object_in_view (camera moved, no whole-scene change).
     signals.append(
         f"fallback_object_in_view: no rule fired; image-token Jaccard={image_jaccard:.2f}"
@@ -458,21 +457,21 @@ _DISTRACTOR_T2_CUES = (
 )
 
 
-def _is_referent_offscreen(target_context: str) -> bool:
+def _is_referent_offscreen(gold_label: str) -> bool:
     """Audit-derived offscreen flag.
 
     The prior referent is offscreen exactly when the model is expected
-    to ground in something not currently visible — i.e., target=prior or
-    target=abstain. This is a coarse approximation; the bank's authored
+    to ground in something not currently visible - i.e., gold_label=prior or
+    gold_label=abstain. This is a coarse approximation; the bank's authored
     label distinguishes ``referent_offscreen`` from ``single_referent``
     in finer detail, but for difficulty scoring this signal is what
     matters: the model can't just look at T2.
     """
-    return target_context in ("prior", "abstain")
+    return gold_label in ("prior", "abstain")
 
 
-def _has_distractor(scenario: dict) -> bool:
-    t2i = scenario.get("turn_2_image") or ""
+def _has_distractor(task: dict) -> bool:
+    t2i = task.get("turn_2_scene_description") or ""
     return _matches_any(t2i, _DISTRACTOR_T2_CUES) is not None
 
 
@@ -488,9 +487,9 @@ _HEAVY_CHANGE_TYPES = frozenset({
 
 
 def audit_difficulty(
-    scenario: dict,
+    task: dict,
     *,
-    target_context: str,
+    gold_label: str,
     shift_type: str,
 ) -> tuple[str, int, dict]:
     """Score difficulty additively from script-derived signals.
@@ -507,15 +506,15 @@ def audit_difficulty(
     breakdown: dict[str, int] = {}
     score = 0
 
-    if target_context in ("abstain", "clarify"):
-        breakdown["target_context_abstain_or_clarify"] = 2
+    if gold_label in ("abstain", "clarify"):
+        breakdown["gold_label_abstain_or_clarify"] = 2
         score += 2
 
-    if _is_referent_offscreen(target_context):
+    if _is_referent_offscreen(gold_label):
         breakdown["referent_offscreen"] = 2
         score += 2
 
-    if _has_distractor(scenario):
+    if _has_distractor(task):
         breakdown["distractor_present"] = 1
         score += 1
 
@@ -523,34 +522,34 @@ def audit_difficulty(
         breakdown["heavy_shift_type"] = 1
         score += 1
 
-    gold = scenario.get("gold") or {}
-    prior_tokens = tokenize(" ".join(_gold_field(gold, "prior_answers")))
-    current_tokens = tokenize(" ".join(_gold_field(gold, "current_answers")))
+    reference_answers = task.get("reference_answers") or {}
+    prior_tokens = tokenize(" ".join(_reference_answers_field(reference_answers, "prior_answers")))
+    current_tokens = tokenize(" ".join(_reference_answers_field(reference_answers, "current_answers")))
     overlap = jaccard(prior_tokens, current_tokens)
     if overlap >= 0.30:
-        breakdown["gold_jaccard_high"] = 2
+        breakdown["reference_answers_jaccard_high"] = 2
         score += 2
     elif overlap >= 0.10:
-        breakdown["gold_jaccard_medium"] = 1
+        breakdown["reference_answers_jaccard_medium"] = 1
         score += 1
 
-    if _has_long_time_gap(scenario.get("turn_2_user") or ""):
+    if _has_long_time_gap(task.get("turn_2_user") or ""):
         breakdown["long_time_gap"] = 1
         score += 1
 
     image_chars = char_overlap_ratio(
-        scenario.get("turn_1_image") or "",
-        scenario.get("turn_2_image") or "",
+        task.get("turn_1_scene_description") or "",
+        task.get("turn_2_scene_description") or "",
     )
     if image_chars >= 0.70:
-        breakdown["subtle_scene_contrast"] = 1
+        breakdown["subtle_scene_paired"] = 1
         score += 1
 
     if (
         shift_type == "object_in_hand"
-        and target_context == "current"
-        and not _has_distractor(scenario)
-        and not _is_referent_offscreen(target_context)
+        and gold_label == "current"
+        and not _has_distractor(task)
+        and not _is_referent_offscreen(gold_label)
     ):
         breakdown["object_in_hand_current_single_bonus"] = -1
         score -= 1

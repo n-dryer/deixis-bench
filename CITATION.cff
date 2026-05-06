@@ -3,7 +3,7 @@ message: "If you reference the Wearable Assistant Context Bench, cite this file.
 title: "Wearable Assistant Context Bench"
 version: "0.1.0a0"
 date-released: "2026-05-01"
-abstract: "Cross-turn reference-resolution benchmark for AI wearable assistants used actively for advice or coaching (smart glasses, ear-worn devices). Each scenario is a short conversation in which the user's situation changes between turns. The candidate sees the user's message and a scene description of the visible frame; an LLM judge labels each Turn 2 response as current, prior, clarify, or abstain against gold answer keys. The release ships 50 scenarios in the main subset plus a 20-scenario contrast pack across 8 shift-type categories."
+abstract: "Cross-turn reference-resolution benchmark for AI wearable assistants used actively for advice or coaching. Each task is a short conversation in which the user's situation changes between turns. The candidate sees the user's message and a scene description of the visible frame; an LLM judge labels each Turn 2 response as current, prior, clarify, or abstain against reference answer keys. The pre-release task bank ships 166 tasks in one flat main task set across 8 shift-type categories."
 authors:
   - family-names: "Dryer"
     given-names: "Nate"

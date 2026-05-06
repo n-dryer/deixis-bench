@@ -10,5 +10,5 @@
   "no_camera": false,
   "repair_style": "named",
   "enable_repair": false,
-  "subset": "main"
+  "task_set": "main"
 }

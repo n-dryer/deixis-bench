@@ -45,12 +45,12 @@ separately:
 
 ## What the model and judge see
 
-Each scenario splits its content between what the candidate model sees and what the judge sees:
+Each task splits its content between what the candidate model sees and what the judge sees:
 
 | Channel | Field(s) | Visible to candidate | Visible to judge |
 |---|---|---|---|
-| Audio | `turn_1_user`, `turn_2_user`, `turn_3_repair_prompt` | Yes | Yes |
-| Camera | `context_image`, `turn_1_image`, `turn_2_image` | Yes (as `[Camera: ...]` blocks) | Yes |
+| Audio | `turn_1_user`, `turn_2_user`, `repair_prompt_named` | Yes | Yes |
+| Camera | `pre_turn_context_scene_description`, `turn_1_scene_description`, `turn_2_scene_description` | Yes (as `[Camera: ...]` blocks) | Yes |
 | Ground truth | `current_answers`, `prior_answers`, `clarify_indicators`, `abstain_indicators` | No | Yes |
 
 The candidate model sees the user's spoken words, plus a scene
@@ -60,24 +60,24 @@ text** (shape, material, color, motion, position, without naming the
 object directly).
 
 The judge sees the user message and the scene description plus the
-gold answer keys, which name the actual objects in frame. The
-candidate never sees the gold answer keys.
+reference answer keys, which name the actual objects in frame. The
+candidate never sees the reference answer keys.
 
 For the rules that govern how each input field is written, see
-[`scenario_authoring_rules.md`](scenario_authoring_rules.md).
+[`task_authoring.md`](task_authoring.md).
 
-## Scenario structure
+## Task structure
 
-Each scenario has three turns:
+Each task has three turns:
 
-1. **Turn 1.** Optional `context_image` injected first (only on
-   `cross_session_reference` scenarios), then `turn_1_image` plus
+1. **Turn 1.** Optional `pre_turn_context_scene_description` injected first (only on
+   `cross_session_reference` tasks), then `turn_1_scene_description` plus
    `turn_1_user`. Turn 1 establishes the starting state.
-2. **Turn 2.** `turn_2_image` plus `turn_2_user`. The image has
+2. **Turn 2.** `turn_2_scene_description` plus `turn_2_user`. The image has
    changed. The user's question is natural and deictic; it does not
    announce the change. **Turn 2 is the only turn that contributes
    to the primary metric.**
-3. **Turn 3.** `turn_3_repair_prompt`. Opt-in via `--enable-repair`
+3. **Turn 3.** `repair_prompt_named`. Opt-in via `--enable-repair`
    (default off). When enabled and the candidate misses Turn 2, the
    anchor is sent as a follow-up; the judge labels the Turn 3
    response the same way it labels Turn 2.
@@ -101,16 +101,16 @@ The runner builds each user turn as:
 ```
 
 When `turn_N_image` is null, the `[Camera: ...]` block is omitted and only the
-user message is sent. When `context_image` is populated, it is injected
+user message is sent. When `pre_turn_context_scene_description` is populated, it is injected
 as a `[Camera: ...]` block before Turn 1, with no accompanying user
 message.
 
 The implementation lives in `_build_message` and
-`_build_context_image_message` in `wearable_assistant_context_bench/runner.py`.
+`_build_pre_turn_context_scene_description_message` in `wearable_assistant_context_bench/runner.py`.
 
 ## The 8 shift-type categories
 
-Every scenario fits exactly one category. Categories describe the
+Every task fits exactly one category. Categories describe the
 shape of the context shift between Turn 1 and Turn 2. The shift type
 is stored as the `shift_type` field in the data files.
 
@@ -123,28 +123,28 @@ is stored as the `shift_type` field in the data files.
 | `object_in_view` | The video stays roughly in place; the user's attention has shifted to a different object visible in the scene. |
 | `absent_referent` | The object the question is about is no longer in frame. |
 | `screen_content` | Both Turn 1 and Turn 2 are looking at a screen; the screen content has changed. |
-| `cross_session_reference` | Requires `context_image`; Turn 2 asks about a state that existed before Turn 1. |
+| `cross_session_reference` | Requires `pre_turn_context_scene_description`; Turn 2 asks about a state that existed before Turn 1. |
 
 In prose throughout the docs we call these "shift types" or
-"scenario categories." The data field name is `shift_type`.
+"task categories." The data field name is `shift_type`.
 
-## Target context labels
+## Gold Labels
 
-Each scenario carries a `target_context` field naming the correct
-grounding target. One of:
+Each task carries a `gold_label` field naming the correct
+grounding label. One of:
 
 | Value | Meaning |
 |---|---|
 | `current` | The correct answer refers to what the video shows right now (Turn 2 frame). |
-| `prior` | The correct answer refers to something from an earlier scene (Turn 1 frame, or `context_image`). |
+| `prior` | The correct answer refers to something from an earlier scene (Turn 1 frame, or `pre_turn_context_scene_description`). |
 | `clarify` | The question is ambiguous given the available context; the assistant should ask for clarification. |
 | `abstain` | The needed information is not present in the context; the assistant should decline. |
 
 ## Scoring
 
 For each Turn 2 response, the judge emits exactly one of the four
-labels: `current`, `prior`, `clarify`, or `abstain`. A scenario is
-counted correct when the judge's label matches `target_context`.
+labels: `current`, `prior`, `clarify`, or `abstain`. A task is
+counted correct when the judge's label matches `gold_label`.
 
 The primary metric is **mean per-class recall**: the mean of
 `current_recall` and `prior_recall` under the `baseline` prompt
@@ -156,10 +156,9 @@ primary_score = mean(current_recall, prior_recall)
 
 The primary metric is reported with both a 95% normal-approximation CI
 and a 95% percentile bootstrap CI; per-class numbers carry 95% Wilson
-CIs. The findings template additionally reports per-pack recall
-(main vs contrast), per shift-type recall (`shift_type`), contrast
-pair consistency (when `pair_id` metadata is present), and hedging
-behavior (clarification rate, abstention rate, coverage).
+CIs. The findings template also reports task-set recall, shift-type
+recall, hedging behavior, code-judge disagreement, and inter-judge
+agreement when a shared ranking judge is configured.
 
 `clarify` and `abstain` rates appear in the findings output as
 auxiliary diagnostic rows. They do not enter the primary number.
@@ -186,24 +185,24 @@ record as auxiliary diagnostics.
 A second LLM labels each Turn 2 response as `current`, `prior`,
 `clarify`, or `abstain`. It sees:
 
-1. A neutral scenario description with the Turn 1 user message and
+1. A neutral task description with the Turn 1 user message and
    the fact that the user's context shifts between turns. It does
-   not see the target label, the shift type, or the authoring notes.
+   not see the `gold_label` value, the shift type, or the authoring notes.
 2. The Turn 2 user message.
 3. The candidate's Turn 2 response.
 4. The four answer lists.
 5. A **ground-truth context section** with plain-language
    descriptions of the Turn 1 and Turn 2 video frames (plus the
-   pre-conversation frame for recall scenarios).
+   pre-conversation frame for recall tasks).
 
 The judge returns a JSON verdict with one label and a one-sentence
 rationale. See `wearable_assistant_context_bench/llm_judge.py` for the prompt and parsing logic.
 The judge prompt is hashed into the run manifest. The privileged-field
-constraint (no `target_context`, `shift_type`, or authoring `notes` in
+constraint (no `gold_label`, `shift_type`, or authoring `notes` in
 the rendered prompt) is enforced by `tests/test_llm_judge.py`.
 
 `--judge-family auto` picks a judge from a different model family
-than the candidate (Claude → Gemini, Gemini → OpenAI, OpenAI →
+than the candidate (Claude -> Gemini, Gemini -> OpenAI, OpenAI ->
 Gemini); the mapping is in `resolve_judge_family` in
 `wearable_assistant_context_bench/llm_judge.py`. Pass
 `--judge-family claude|gemini|openai` to override.
@@ -218,11 +217,11 @@ the screwdriver from before"`). The judge labels the Turn 3 response
 the same way it labeled Turn 2.
 
 `--repair-style {named,deictic}` controls the anchor: `named`
-(default) uses the explicit `turn_3_repair_prompt`; `deictic` uses
-`turn_3_repair_prompt_deictic` when populated and falls back to
-`named` for scenarios where a deictic gesture cannot resolve the
+(default) uses the explicit `repair_prompt_named`; `deictic` uses
+`repair_prompt_deictic` when populated and falls back to
+`named` for tasks where a deictic gesture cannot resolve the
 reference (`absent_referent`, `cross_session_reference`,
-target_context other than `current`).
+gold_label other than `current`).
 
 The repair rate is the fraction of Turn 2 misses that pass on Turn 3.
 With repair disabled (the default), the report omits this section.
@@ -234,8 +233,8 @@ manifest fields include:
 
 - `benchmark_version`: the runner code version
 - `camera_injection`: boolean; always `true`
-- `subset`: `"main"` or `"contrast"`, naming the subset the run evaluated
-- `scenarios_sha256`: hash of `data/wacb.jsonl`
+- `task_set`: `"main"` for the flat pre-release task set
+- `tasks_sha256`: hash of `data/tasks.jsonl`
 - `prompt_conditions_sha256`: hash of `data/prompt_conditions.json`
 - `judge_prompt_sha256`: judge prompt identification
 - `candidate_model`, `judge_model`, `judge_family`,
@@ -245,8 +244,8 @@ manifest fields include:
 - `timestamp_utc`, `runner_git_commit`: run identity
 
 The repo commits `data/MANIFEST.lock.json` with the SHA256 hashes of
-the scenario set, prompt conditions, and judge prompt template.
-`scripts/validate_scenarios.py` checks computed hashes against this
+the task set, prompt conditions, and judge prompt template.
+`scripts/validate_tasks.py` checks computed hashes against this
 lockfile; CI fails if they drift without a coordinated
 `BENCHMARK_VERSION` bump.
 
@@ -267,8 +266,7 @@ The runner loads its defaults from `data/config.json`. Key defaults:
 
 - `trials_per_cell: 1`
 - `enable_repair: false`. The Turn 3 repair turn is opt-in.
-- `subset: "main"`. Use `--subset contrast` for the 20-scenario
-  subset.
+- `task_set: "main"` for every active task.
 - `temperature: 0.0`.
 
 CLI flags override the config file. Use `--config <path>` to point at
@@ -278,6 +276,6 @@ an alternate config.
 
 - Schema and field-level definitions: [`schema.md`](schema.md)
 - Authoring rules and validation checklist:
-  [`scenario_authoring_rules.md`](scenario_authoring_rules.md)
+  [`task_authoring.md`](task_authoring.md)
 - Per-run findings: `findings.md` (in the run's output directory)
 - Dataset card: [`../data/README.md`](../data/README.md)

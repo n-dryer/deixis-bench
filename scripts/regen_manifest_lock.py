@@ -1,8 +1,8 @@
 """Regenerate the static asset lockfile at ``data/MANIFEST.lock.json``.
 
-The lockfile pins SHA256 hashes of the unified scenario set,
+The lockfile pins SHA256 hashes of the unified task set,
 prompt-condition definitions, and the judge-prompt template, alongside
-the benchmark version. ``scripts/validate_scenarios.py`` compares the
+the benchmark version. ``scripts/validate_tasks.py`` compares the
 computed hashes against this lockfile and fails CI if any drift without
 a coordinated ``BENCHMARK_VERSION`` bump.
 
@@ -27,11 +27,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 LOCKFILE_PATH = DATA_DIR / "MANIFEST.lock.json"
-SCENARIOS_PATH = DATA_DIR / "wacb.jsonl"
+TASKS_PATH = DATA_DIR / "tasks.jsonl"
 PROMPT_CONDITIONS_PATH = DATA_DIR / "prompt_conditions.json"
 
 LOCKFILE_NOTE = (
-    "Static lockfile. scripts/validate_scenarios.py compares computed "
+    "Static lockfile. scripts/validate_tasks.py compares computed "
     "hashes against this lock and fails CI if they drift without a "
     "coordinated benchmark_version bump. Regenerate by running "
     "scripts/regen_manifest_lock.py."
@@ -50,7 +50,7 @@ def build_lockfile() -> dict:
     lockfile = {
         "benchmark_version": BENCHMARK_VERSION,
         "judge_prompt_sha256": hashlib.sha256(JUDGE_SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
-        "scenarios_sha256": _sha256(SCENARIOS_PATH),
+        "tasks_sha256": _sha256(TASKS_PATH),
         "prompt_conditions_sha256": _sha256(PROMPT_CONDITIONS_PATH),
     }
     lockfile["_note"] = LOCKFILE_NOTE

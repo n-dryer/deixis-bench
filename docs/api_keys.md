@@ -23,4 +23,4 @@ accounts get included Inference Provider credits each month;
 extra usage is billed at provider rates with no markup.
 
 Setup details and recommended candidates:
-[`running_open_weights.md`](running_open_weights.md).
+[`running_models.md`](running_models.md).

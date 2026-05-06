@@ -1,6 +1,6 @@
 """Adapter unit tests (Gemini + LiteLLM).
 
-These tests never hit a real provider API — they inject stub clients
+These tests never hit a real provider API - they inject stub clients
 that record their calls and return canned responses. The shared
 ``_StubGeminiClient`` and ``_StubCompletion`` stubs live in
 ``tests/conftest.py``.

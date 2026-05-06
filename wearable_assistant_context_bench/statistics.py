@@ -7,7 +7,7 @@ near 0 or 1; the bootstrap covers cases (means of proportions, derived
 statistics) where Wilson is awkward.
 
 Reference: Wilson, E. B. (1927). Probable inference, the law of
-succession, and statistical inference. JASA, 22(158), 209–212.
+succession, and statistical inference. JASA, 22(158), 209-212.
 """
 
 from __future__ import annotations

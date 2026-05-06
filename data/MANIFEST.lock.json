@@ -1,7 +1,7 @@
 {
   "benchmark_version": "0.1.0a0",
-  "judge_prompt_sha256": "9af89d3743512a47f98c27dd2bdd39175141b26677e18841f713316805953e9e",
-  "scenarios_sha256": "fc7b462cae483d638b37907ed1920e8e68e54505978dae354bcf526967e0fa67",
-  "prompt_conditions_sha256": "374ca5837b4ca75cfa2f6b2fd65769c23ccefcf04697b29af19e109a7f6bebe9",
-  "_note": "Static lockfile. scripts/validate_scenarios.py compares computed hashes against this lock and fails CI if they drift without a coordinated benchmark_version bump. Regenerate by running scripts/regen_manifest_lock.py."
+  "judge_prompt_sha256": "b2289bcc4da706408132b89a4dbe1cdcd83423921779f69adb6eab8e2a03bec5",
+  "tasks_sha256": "1b2fe36f2d19971a4f66e9f47462bac75926b38656045ce9afb604c1fc7b1de9",
+  "prompt_conditions_sha256": "292f7dc0631c956c850ba868106c395f1d0865589ebd123df1a5471095b77bce",
+  "_note": "Static lockfile. scripts/validate_tasks.py compares computed hashes against this lock and fails CI if they drift without a coordinated benchmark_version bump. Regenerate by running scripts/regen_manifest_lock.py."
 }

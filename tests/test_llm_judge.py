@@ -1,8 +1,8 @@
 """Tests for the LLM judge: label parsing, family selection, and the
 no-leakage constraints on what the judge prompt may contain.
 
-The judge labels each Turn 2 response without seeing the scenario's
-``target_context`` label, the ``shift_type`` shift category, or the
+The judge labels each Turn 2 response without seeing the task's
+``gold_label`` label, the ``shift_type`` shift category, or the
 authoring ``notes``. Those fields would tell the judge the answer it
 is being asked to produce. These tests verify the prompt-building
 helpers respect those constraints.
@@ -32,10 +32,10 @@ from wearable_assistant_context_bench.llm_judge import (
     resolve_judge_family,
 )
 from wearable_assistant_context_bench.runner import (
-    SCENARIOS_PATH,
+    TASKS_PATH,
     _build_ground_truth_context,
-    _build_scenario_description,
-    load_scenarios,
+    _build_task_description,
+    load_tasks,
 )
 
 # ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ def test_judge_label_round_trips_through_stub_adapter() -> None:
     judge = LLMJudge(adapter=stub, model_id="stub-model")
     verdict = judge.label(
         response="I'll summarize the three clips from yesterday.",
-        scenario_description="Turn 1 set up three uploaded clips.",
+        task_description="Turn 1 set up three uploaded clips.",
         turn_2_user="Tell me about my day yesterday.",
         current_answers=[],
         prior_answers=["art museum", "farmers market"],
@@ -284,84 +284,84 @@ def test_litellm_judge_adapter_family_is_configurable() -> None:
 
 
 @pytest.fixture(scope="module")
-def scenarios():
-    return load_scenarios(SCENARIOS_PATH)
+def tasks():
+    return load_tasks(TASKS_PATH)
 
 
-def _label_naming_phrases(target_context: str) -> tuple[str, ...]:
+def _label_naming_phrases(gold_label: str) -> tuple[str, ...]:
     return (
-        f"target context for turn 2 is `{target_context}`",
-        f"target context for turn 2 is {target_context}",
-        f"target context: {target_context}",
-        f"target_context: {target_context}",
-        f"target context is `{target_context}`",
-        f"the correct label is {target_context}",
-        f"correct policy is {target_context}",
-        f"the answer is {target_context}",
+        f"target context for turn 2 is `{gold_label}`",
+        f"target context for turn 2 is {gold_label}",
+        f"target context: {gold_label}",
+        f"gold_label: {gold_label}",
+        f"target context is `{gold_label}`",
+        f"the correct label is {gold_label}",
+        f"correct policy is {gold_label}",
+        f"the answer is {gold_label}",
     )
 
 
-def test_scenario_description_does_not_name_target_context(scenarios) -> None:
+def test_task_description_does_not_name_gold_label(tasks) -> None:
     leaks: list[str] = []
-    for scenario in scenarios:
-        rendered = _build_scenario_description(scenario).lower()
-        for phrase in _label_naming_phrases(scenario.target_context):
+    for task in tasks:
+        rendered = _build_task_description(task).lower()
+        for phrase in _label_naming_phrases(task.gold_label):
             if phrase in rendered:
-                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in scenario_description")
-    assert not leaks, "scenario_description names target_context for:\n  - " + "\n  - ".join(leaks)
+                leaks.append(f"{task.task_id}: {phrase!r} found in task_description")
+    assert not leaks, "task_description names gold_label for:\n  - " + "\n  - ".join(leaks)
 
 
-def test_ground_truth_context_omits_target_cue_and_notes(scenarios) -> None:
+def test_ground_truth_context_omits_target_cue_and_notes(tasks) -> None:
     leaks: list[str] = []
-    for scenario in scenarios:
-        rendered = _build_ground_truth_context(scenario)
+    for task in tasks:
+        rendered = _build_ground_truth_context(task)
         rendered_lower = rendered.lower()
-        for phrase in _label_naming_phrases(scenario.target_context):
+        for phrase in _label_naming_phrases(task.gold_label):
             if phrase in rendered_lower:
-                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in ground_truth_context")
-        if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
+                leaks.append(f"{task.task_id}: {phrase!r} found in ground_truth_context")
+        if task.shift_type and task.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
+                f"{task.task_id}: shift_type {task.shift_type!r} found in "
                 f"ground_truth_context"
             )
-        if scenario.notes and len(scenario.notes) >= 8:
-            if scenario.notes.lower() in rendered_lower:
+        if task.notes and len(task.notes) >= 8:
+            if task.notes.lower() in rendered_lower:
                 leaks.append(
-                    f"{scenario.scenario_id}: authoring notes appear in ground_truth_context"
+                    f"{task.task_id}: authoring notes appear in ground_truth_context"
                 )
     assert not leaks, "ground_truth_context exposes privileged fields for:\n  - " + "\n  - ".join(
         leaks
     )
 
 
-def test_full_rendered_judge_prompt_omits_privileged_fields(scenarios) -> None:
+def test_full_rendered_judge_prompt_omits_privileged_fields(tasks) -> None:
     """End-to-end: the full rendered judge user message contains no privileged fields."""
     sample_response = "An assistant response that mentions some object."
     leaks: list[str] = []
-    for scenario in scenarios:
+    for task in tasks:
         rendered = _build_user_prompt(
             response=sample_response,
-            scenario_description=_build_scenario_description(scenario),
-            turn_2_user=scenario.turn_2_user,
-            current_answers=scenario.gold.current_answers,
-            prior_answers=scenario.gold.prior_answers,
-            clarify_indicators=scenario.gold.clarify_indicators,
-            abstain_indicators=scenario.gold.abstain_indicators,
-            ground_truth_context=_build_ground_truth_context(scenario),
+            task_description=_build_task_description(task),
+            turn_2_user=task.turn_2_user,
+            current_answers=task.reference_answers.current_answers,
+            prior_answers=task.reference_answers.prior_answers,
+            clarify_indicators=task.reference_answers.clarify_indicators,
+            abstain_indicators=task.reference_answers.abstain_indicators,
+            ground_truth_context=_build_ground_truth_context(task),
         )
         rendered_lower = rendered.lower()
-        for phrase in _label_naming_phrases(scenario.target_context):
+        for phrase in _label_naming_phrases(task.gold_label):
             if phrase in rendered_lower:
-                leaks.append(f"{scenario.scenario_id}: {phrase!r} found in rendered judge prompt")
-        if scenario.shift_type and scenario.shift_type.lower() in rendered_lower:
+                leaks.append(f"{task.task_id}: {phrase!r} found in rendered judge prompt")
+        if task.shift_type and task.shift_type.lower() in rendered_lower:
             leaks.append(
-                f"{scenario.scenario_id}: shift_type {scenario.shift_type!r} found in "
+                f"{task.task_id}: shift_type {task.shift_type!r} found in "
                 f"rendered judge prompt"
             )
-        if scenario.notes and len(scenario.notes) >= 8:
-            if scenario.notes.lower() in rendered_lower:
+        if task.notes and len(task.notes) >= 8:
+            if task.notes.lower() in rendered_lower:
                 leaks.append(
-                    f"{scenario.scenario_id}: authoring notes appear in rendered judge prompt"
+                    f"{task.task_id}: authoring notes appear in rendered judge prompt"
                 )
     assert not leaks, "Rendered judge prompt exposes privileged fields for:\n  - " + "\n  - ".join(
         leaks
