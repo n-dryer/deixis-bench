@@ -11,7 +11,7 @@
 
 Does this PR change any of the following? Tick all that apply.
 
-- [ ] `data/scenarios.jsonl` (scenario text or inline gold labels)
+- [ ] `data/wacb.jsonl` (scenario text or inline gold labels)
 - [ ] `data/prompt_conditions.json`
 - [ ] Judge labels (`current`, `prior`, `clarify`, `abstain`)
 - [ ] Primary scoring rule (`mean(current_recall, prior_recall)`)

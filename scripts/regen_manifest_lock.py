@@ -27,7 +27,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 LOCKFILE_PATH = DATA_DIR / "MANIFEST.lock.json"
-SCENARIOS_PATH = DATA_DIR / "scenarios.jsonl"
+SCENARIOS_PATH = DATA_DIR / "wacb.jsonl"
 PROMPT_CONDITIONS_PATH = DATA_DIR / "prompt_conditions.json"
 
 LOCKFILE_NOTE = (

@@ -4,7 +4,7 @@ Two-pass audit:
 
 1. Rule-based: applies the rubric in
    ``wearable_assistant_context_bench.audit_rubric`` to every scenario
-   in ``data/scenarios.jsonl``. Pure-functional, deterministic, fast.
+   in ``data/wacb.jsonl``. Pure-functional, deterministic, fast.
 2. LLM-judge spot-check (optional, ``--judge-on-disagreement``): for any
    scenario where the audit disagrees with metadata on either field,
    one structured judge call produces a tie-breaking verdict + rationale.
@@ -16,7 +16,7 @@ verdict, then compares against them in the report.
 Usage:
     python scripts/audit_scenarios.py
     python scripts/audit_scenarios.py --judge-on-disagreement
-    python scripts/audit_scenarios.py --in data/scenarios.jsonl --out data/scenarios.audit.csv
+    python scripts/audit_scenarios.py --in data/wacb.jsonl --out data/scenarios.audit.csv
 
 Exits 0 always. Mismatches are surfaced in the CSV, not as failures, so
 this script can be invoked without breaking CI.
@@ -44,7 +44,7 @@ from wearable_assistant_context_bench.audit_rubric import (  # noqa: E402
     audit_target_context,
 )
 
-DEFAULT_INPUT = REPO_ROOT / "data" / "scenarios.jsonl"
+DEFAULT_INPUT = REPO_ROOT / "data" / "wacb.jsonl"
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "scenarios.audit.csv"
 
 JUDGE_DISAGREEMENT_CAP = 60
@@ -276,7 +276,7 @@ def main() -> int:
         dest="input_path",
         type=Path,
         default=DEFAULT_INPUT,
-        help=f"Path to scenarios.jsonl (default: {DEFAULT_INPUT.relative_to(REPO_ROOT)})",
+        help=f"Path to wacb.jsonl (default: {DEFAULT_INPUT.relative_to(REPO_ROOT)})",
     )
     parser.add_argument(
         "--out",

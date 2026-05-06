@@ -1,7 +1,7 @@
 # Scenario Audit Rubric
 
 Independent rule-based audit of `shift_type` and `difficulty_tier`
-metadata in `data/scenarios.jsonl`. The audit ignores the metadata
+metadata in `data/wacb.jsonl`. The audit ignores the metadata
 fields it is auditing and re-classifies each scenario from script
 content alone (`turn_1_image`, `turn_2_image`, `turn_1_user`,
 `turn_2_user`, `context_image`, `gold`).
@@ -20,7 +20,7 @@ holds:
 | column | meaning |
 |---|---|
 | `scenario_id` | from the bank |
-| `metadata_shift_type` | as authored in `scenarios.jsonl` |
+| `metadata_shift_type` | as authored in `wacb.jsonl` |
 | `audit_shift_type` | inferred by the rubric |
 | `shift_type_match` | `True` / `False` |
 | `metadata_difficulty` | as authored |

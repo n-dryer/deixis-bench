@@ -15,7 +15,7 @@ quality, or domain expertise are not.
 The following stay stable across patch releases so cross-model
 comparisons remain valid:
 
-- `data/scenarios.jsonl`: scenario text + inline gold labels
+- `data/wacb.jsonl`: scenario text + inline gold labels
 - `data/prompt_conditions.json`: prompt conditions
 - The four judge labels (`current`, `prior`, `clarify`, `abstain`)
 - The primary scoring rule: `mean(current_recall, prior_recall)`

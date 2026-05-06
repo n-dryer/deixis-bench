@@ -1,6 +1,6 @@
 """Schema and validator tests for the unified scenario file.
 
-These tests treat ``data/scenarios.jsonl`` as the only active
+These tests treat ``data/wacb.jsonl`` as the only active
 source of truth for scenarios + gold labels. They assert the schema
 contract from ``docs/schema.md`` and run the four programmatic
 validator checks from ``scripts/validate_scenarios.py``.
@@ -17,7 +17,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-SCENARIOS_PATH = REPO_ROOT / "data" / "scenarios.jsonl"
+SCENARIOS_PATH = REPO_ROOT / "data" / "wacb.jsonl"
 
 
 REQUIRED_FIELDS = {
@@ -321,12 +321,12 @@ def test_check_7_lockfile_drift_passes(monkeypatch) -> None:
 
 
 def test_check_7_lockfile_drift_detects_mutation(monkeypatch, tmp_path) -> None:
-    """Mutating scenarios.jsonl without bumping benchmark_version trips the lock."""
+    """Mutating wacb.jsonl without bumping benchmark_version trips the lock."""
     monkeypatch.chdir(REPO_ROOT)
     fake_root = tmp_path
     (fake_root / "data").mkdir(parents=True)
     original_scenarios = SCENARIOS_PATH.read_bytes()
-    (fake_root / "data" / "scenarios.jsonl").write_bytes(original_scenarios + b"\n")
+    (fake_root / "data" / "wacb.jsonl").write_bytes(original_scenarios + b"\n")
     (fake_root / "data" / "prompt_conditions.json").write_bytes(
         (REPO_ROOT / "data" / "prompt_conditions.json").read_bytes()
     )
