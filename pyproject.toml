@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wearable-assistant-context-bench"
-version = "0.1.1"
-description = "Cross-turn reference-resolution benchmark for multimodal AI assistants used actively for advice or coaching, wearable or handheld."
+version = "0.1.0a0"
+description = "Cross-turn reference-resolution benchmark for AI wearable assistants used actively for advice or coaching."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -16,9 +16,7 @@ authors = [
 keywords = [
   "reference-resolution",
   "cross-turn",
-  "multimodal",
   "wearable",
-  "handheld",
   "ai-coach",
   "model-selection",
   "llm-as-judge",

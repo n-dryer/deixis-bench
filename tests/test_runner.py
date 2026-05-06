@@ -414,7 +414,7 @@ def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     assert payload["ranking_judge_model"] is None
     assert payload["ranking_judge_family"] is None
     # Positive: benchmark_version is recorded at the top level.
-    assert payload["benchmark_version"] == "0.1.1"
+    assert payload["benchmark_version"] == "0.1.0a0"
     # Negative regression guards: removed fields must not reappear.
     assert "schema_revision" not in payload
     assert "judge_prompt_version" not in payload
@@ -959,6 +959,4 @@ def test_runtime_data_is_available_as_package_resources() -> None:
         packaged = resource_root.joinpath(name)
         source = REPO_ROOT / "data" / name
         assert packaged.is_file(), f"missing packaged runtime data: {name}"
-        assert packaged.read_text(encoding="utf-8") == source.read_text(
-            encoding="utf-8"
-        )
+        assert packaged.read_text(encoding="utf-8") == source.read_text(encoding="utf-8")

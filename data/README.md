@@ -19,7 +19,7 @@ For product motivation and quickstart, see
 - **Reference resolution under cross-turn context shift.** The
   primary task. The judge labels each Turn 2 response as `current`,
   `prior`, `clarify`, or `abstain`.
-- **Model selection** for deployed multimodal coaching assistants.
+- **Model selection** for deployed AI wearable coaching assistants.
 
 ## Languages
 
