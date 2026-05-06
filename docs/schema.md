@@ -26,8 +26,6 @@ ground-truth context. The candidate never sees `gold_label`,
 | `turn_1_user` | string | yes | Turn 1 user speech. |
 | `turn_2_scene_description` | string | yes | Scene-description text paired with the scored Turn 2 question. |
 | `turn_2_user` | string | yes | Scored user question. |
-| `repair_prompt_named` | string | yes | Named Turn 3 repair prompt used when repair is enabled. |
-| `repair_prompt_deictic` | string or null | no | Deictic Turn 3 repair prompt for visible-current tasks. |
 | `reference_answers` | object | yes | Judge-only answer lists. |
 | `notes` | string | no | Authoring notes, never sent to the candidate or judge prompt. |
 

@@ -25,8 +25,8 @@ dataset.
 ## Fields
 
 Each task has a stable `task_id`, context metadata, Turn 1 and Turn 2
-scene-description text, user speech, optional repair prompts, and
-judge-only `reference_answers`. See [`../docs/schema.md`](../docs/schema.md)
+scene-description text, user speech, and judge-only `reference_answers`.
+See [`../docs/schema.md`](../docs/schema.md)
 for the full field contract.
 
 ## Statistics
@@ -86,8 +86,7 @@ uv run wac-bench --model <candidate_model_id> --output-dir runs/<run_name>
 ```
 
 Add `--no-camera` to strip the `[Camera: ...]` scene-description
-blocks. Add `--enable-repair` to run the optional Turn 3 repair prompt
-after a Turn 2 miss.
+blocks (camera-channel ablation).
 
 ## License
 

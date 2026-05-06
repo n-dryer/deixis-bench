@@ -244,8 +244,6 @@ def sample_trial_factory():
         turn_2_passed: bool = True,
         turn_2_judge_label: str | None = None,
         turn_2_code_signals: dict | None = None,
-        turn_3_repair_attempted: bool = False,
-        turn_3_repair_passed: bool | None = None,
         task_set: str = "main",
         shift_type: str = "object_in_hand",
     ) -> dict:
@@ -263,8 +261,6 @@ def sample_trial_factory():
                 else (gold_label if turn_2_passed else "abstain")
             ),
             "turn_2_code_signals": turn_2_code_signals or {},
-            "turn_3_repair_attempted": turn_3_repair_attempted,
-            "turn_3_repair_passed": turn_3_repair_passed,
         }
 
     return _make

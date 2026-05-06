@@ -14,14 +14,12 @@ the metric helpers in
    visibility. ``current`` and ``prior`` are the primary classes.
    ``clarify`` and ``abstain`` are auxiliary diagnostic classes and
    are not included in the primary score.
-5. **Simulated repair rate per condition** (only when ``--enable-repair``
-   was set).
-6. **Hedging behavior.** Clarification rate, abstention rate, and the
+5. **Hedging behavior.** Clarification rate, abstention rate, and the
    coverage metric ``1 - (clarify_rate + abstain_rate)``.
-7. **Code-judge disagreement count per task.**
-8. **Inter-judge agreement (cross-LLM).**
-9. **Task-by-condition matrix.**
-10. **Reproducibility manifest.** A JSON block with the task /
+6. **Code-judge disagreement count per task.**
+7. **Inter-judge agreement (cross-LLM).**
+8. **Task-by-condition matrix.**
+9. **Reproducibility manifest.** A JSON block with the task /
     prompt-conditions / judge-prompt SHAs, model strings, trials,
     temperature, and the default comparison condition.
 """
@@ -40,7 +38,6 @@ from wearable_assistant_context_bench.aggregation import (
     REQUIRED_MANIFEST_KEYS,
     SCORED_POLICIES,
     PassRateCell,
-    RepairRateCell,
     abstain_rate,
     clarify_rate,
     class_recall_with_ci_under_condition,
@@ -53,7 +50,6 @@ from wearable_assistant_context_bench.aggregation import (
     per_policy_pass_rate_by_condition,
     recall_by_shift_type,
     recall_by_task_set,
-    simulated_repair_rate_by_condition,
     sorted_conditions,
     task_by_condition_matrix,
     wilson_interval,
@@ -85,7 +81,6 @@ def render_findings_markdown(
         reproducibility manifest block.
     """
     grid = per_policy_pass_rate_by_condition(results)
-    repair = simulated_repair_rate_by_condition(results)
     disagreements = code_judge_disagreement_by_task(results)
     matrix = task_by_condition_matrix(results)
     conditions = sorted_conditions(results)
@@ -108,7 +103,6 @@ def render_findings_markdown(
     clarify_ci = clarify_rate(results, ranking_condition)
     abstain_ci = abstain_rate(results, ranking_condition)
     coverage_ci = coverage_rate(results, ranking_condition)
-    repair_enabled = any(bool(t.get("turn_3_repair_attempted")) for t in results)
 
     sections = [
         f"# {BENCHMARK_NAME}: Findings",
@@ -139,15 +133,6 @@ def render_findings_markdown(
         _render_policy_grid(grid, conditions),
         "",
     ]
-    if repair_enabled:
-        sections.extend(
-            [
-                "## Simulated repair rate by condition",
-                "",
-                _render_repair_table(repair),
-                "",
-            ]
-        )
     sections.extend(
         [
             "## Hedging behavior",
@@ -324,35 +309,12 @@ def _render_policy_grid(
     return "\n".join(rows)
 
 
-def _render_repair_table(repair: dict[str, RepairRateCell]) -> str:
-    header = "| Condition | Repair rate (95% CI) |"
-    separator = "| --- | --- |"
-    rows = [header, separator]
-    for condition, cell in repair.items():
-        if cell.failures == 0:
-            rows.append(f"| {condition} | no Turn 2 failures |")
-            continue
-        pct = cell.rate * 100 if cell.rate is not None else 0.0
-        ci = wilson_interval(cell.repaired, cell.failures)
-        if ci is None:
-            rows.append(f"| {condition} | {pct:.1f}% ({cell.repaired} / {cell.failures}) |")
-        else:
-            _, lo, hi = ci
-            rows.append(
-                f"| {condition} | {pct:.1f}% [95% CI {lo * 100:.1f}-{hi * 100:.1f}] "
-                f"({cell.repaired} / {cell.failures}) |"
-            )
-    return "\n".join(rows)
-
-
 def _render_disagreement_list(disagreements: dict[str, int]) -> str:
     if not disagreements:
         return "_No trials recorded._"
     lines: list[str] = []
     for task_id in sorted(disagreements.keys()):
-        lines.append(
-            f"- {task_id}: {disagreements[task_id]} trial(s) with code/judge disagreement"
-        )
+        lines.append(f"- {task_id}: {disagreements[task_id]} trial(s) with code/judge disagreement")
     return "\n".join(lines)
 
 
@@ -426,19 +388,7 @@ def _render_task_matrix(
 def _format_trial_outcomes(trials: list[dict]) -> str:
     if not trials:
         return "-"
-    tokens: list[str] = []
-    for entry in trials:
-        if entry["turn_2_passed"]:
-            tokens.append("pass")
-            continue
-        if not entry["turn_3_repair_attempted"]:
-            tokens.append("fail")
-            continue
-        if entry["turn_3_repair_passed"]:
-            tokens.append("fail->repair-pass")
-        else:
-            tokens.append("fail->repair-fail")
-    return ", ".join(tokens)
+    return ", ".join("pass" if entry["turn_2_passed"] else "fail" for entry in trials)
 
 
 def _render_manifest_block(manifest: dict[str, Any]) -> str:

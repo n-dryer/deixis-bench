@@ -17,8 +17,6 @@ Expected per-trial result dict keys:
     turn_2_code_signals (dict)
     turn_2_judge_label (str)
     turn_2_passed (bool): judge_label == gold_label
-    turn_3_repair_attempted (bool)
-    turn_3_repair_passed (bool | None)
 """
 
 from __future__ import annotations
@@ -63,7 +61,11 @@ def wilson_interval(
 
 POLICIES: tuple[str, ...] = ("current", "prior", "clarify", "abstain")
 SCORED_POLICIES: tuple[str, ...] = ("current", "prior")
-CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "context_selection_instruction", "pre_answer_context_scaffold")
+CONDITIONS_ORDER: tuple[str, ...] = (
+    "baseline",
+    "context_selection_instruction",
+    "pre_answer_context_scaffold",
+)
 AUXILIARY_POLICY_NOTE: str = "auxiliary; not included in the primary current/prior score"
 
 BENCHMARK_NAME: str = "Wearable Assistant Context Bench"
@@ -96,20 +98,6 @@ class PassRateCell:
         if self.total == 0:
             return None
         return self.passed / self.total
-
-
-@dataclass
-class RepairRateCell:
-    """One condition's simulated repair rate."""
-
-    repaired: int
-    failures: int
-
-    @property
-    def rate(self) -> float | None:
-        if self.failures == 0:
-            return None
-        return self.repaired / self.failures
 
 
 def _policies_with_tasks(results: list[dict]) -> set[str]:
@@ -439,8 +427,7 @@ def build_run_summary_dict(
         "primary_score_mean_recall": _ci(primary),
         "per_class_recall": {policy: _ci(triple) for policy, triple in per_class.items()},
         "per_task_set_recall": {
-            task_set_value: _ci(triple)
-            for task_set_value, triple in per_task_set.items()
+            task_set_value: _ci(triple) for task_set_value, triple in per_task_set.items()
         },
         "clarify_rate": _ci(clarify_rate(results, ranking_condition)),
         "abstain_rate": _ci(abstain_rate(results, ranking_condition)),
@@ -451,7 +438,6 @@ def build_run_summary_dict(
             "temperature": manifest.get("temperature"),
             "task_set": manifest.get("task_set"),
             "no_camera": manifest.get("camera_injection") is False,
-            "enable_repair": manifest.get("enable_repair"),
         },
     }
 
@@ -468,28 +454,6 @@ def _label_rate(
         if trial.get("turn_2_judge_label") == label:
             matched += 1
     return wilson_interval(matched, total)
-
-
-def simulated_repair_rate_by_condition(
-    results: list[dict],
-) -> dict[str, RepairRateCell]:
-    """Compute simulated repair rate per condition."""
-    by_condition: dict[str, list[dict]] = defaultdict(list)
-    for trial in results:
-        by_condition[trial["condition"]].append(trial)
-
-    out: dict[str, RepairRateCell] = {}
-    for condition in sorted(by_condition.keys(), key=_condition_sort_key):
-        failures = 0
-        repaired = 0
-        for trial in by_condition[condition]:
-            if bool(trial["turn_2_passed"]):
-                continue
-            failures += 1
-            if bool(trial.get("turn_3_repair_passed")):
-                repaired += 1
-        out[condition] = RepairRateCell(repaired=repaired, failures=failures)
-    return out
 
 
 def cohens_kappa(labels_a: list[str], labels_b: list[str]) -> float | None:
@@ -595,8 +559,6 @@ def task_by_condition_matrix(
             {
                 "trial": trial["trial"],
                 "turn_2_passed": bool(trial["turn_2_passed"]),
-                "turn_3_repair_attempted": bool(trial.get("turn_3_repair_attempted", False)),
-                "turn_3_repair_passed": trial.get("turn_3_repair_passed"),
             }
         )
     for task in grid.values():

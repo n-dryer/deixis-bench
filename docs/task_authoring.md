@@ -38,7 +38,7 @@ sees and what the judge sees:
 
 | Field group | Fields | Visible to candidate | Visible to judge |
 |---|---|---|---|
-| User messages | `turn_1_user`, `turn_2_user`, `repair_prompt_named` | Yes | Yes |
+| User messages | `turn_1_user`, `turn_2_user` | Yes | Yes |
 | Scene descriptions | `pre_turn_context_scene_description`, `turn_1_scene_description`, `turn_2_scene_description` | Yes (as `[Camera: ...]` blocks) | Yes |
 | Gold answers | `current_answers`, `prior_answers`, `clarify_indicators`, `abstain_indicators` | No | Yes |
 
@@ -141,49 +141,6 @@ to be cryptic, only non-labeled.
 | "User holding a claw hammer above a nail." | "Hand wrapped around a long wooden handle. Heavy metal head at the top, one face flat, the other split into two curved prongs. Positioned above a nail head protruding from a pine board." |
 | "Correctly gripped Phillips-head screwdriver inserted into screw." | "Right hand gripping a slim metal tool with a crosshead tip, inserted into a fastener partially driven into a wood surface. Elbow raised, wrist rotated." |
 | "Pan of soup on the stove, looks done." | "Shallow metal pan on a gas burner. Liquid surface showing small bubbles around the edges. Steam rising visibly." |
-
----
-
-## Repair anchor rules
-
-Every task must populate `repair_prompt_named` (the named anchor).
-Visible-referent tasks with `gold_label: "current"` additionally
-populate `repair_prompt_deictic` (the deictic anchor).
-
-### Named anchor
-
-`repair_prompt_named` names both the intended object and the wrong
-object explicitly: *"I mean the hammer I'm holding now, not the
-screwdriver from before."*
-
-The named anchor is required on every task.
-
-### Deictic anchor
-
-`repair_prompt_deictic` uses pure spatial or temporal deictic
-language: *"I mean this thing in my hand right now"* or *"I mean what
-I'm looking at."* It must not name either object.
-
-Populate the deictic field only when **all three** are true:
-
-1. `gold_label == "current"` (the user is repairing toward the
-   present frame).
-2. `shift_type` in {`object_in_hand`, `object_in_view`, `object_state`,
-   `screen_content`, `sequential_task`, `location`}. These are the
-   visible-referent categories where a real wearable's vision system
-   could resolve a deictic gesture.
-3. The Turn 2 referent is genuinely visible in the video frame
-   (i.e. the deictic gesture is technically resolvable).
-
-Leave the field as `null` for `absent_referent`,
-`cross_session_reference`, and any task whose `gold_label` is `prior`,
-`clarify`, or `abstain`. The runner falls back to the named anchor in
-those cases when invoked with `--repair-style deictic`.
-
-The deictic anchor must not contain object-name vocabulary from the
-`current_answers` or `prior_answers` lists. The validator's token
-leakage check applies to it the same way it applies to user-speech
-fields.
 
 ---
 
