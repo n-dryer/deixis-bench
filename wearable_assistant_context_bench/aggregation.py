@@ -68,10 +68,10 @@ CONDITIONS_ORDER: tuple[str, ...] = ("baseline", "condition_a", "condition_b")
 AUXILIARY_POLICY_NOTE: str = "auxiliary; not included in the primary current/prior score"
 
 BENCHMARK_NAME: str = "Wearable Assistant Context Bench"
-BENCHMARK_VERSION: str = "0.1.1"
+BENCHMARK_VERSION: str = "0.1.0a0"
 BENCHMARK_LABEL: str = (
-    "situated context-tracking benchmark for multimodal AI assistants "
-    "used actively for advice or coaching (wearable or handheld)"
+    "situated context-tracking benchmark for AI wearable assistants "
+    "used actively for advice or coaching"
 )
 DEFAULT_RANKING_CONDITION: str = "baseline"
 

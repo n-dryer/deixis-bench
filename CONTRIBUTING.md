@@ -4,7 +4,7 @@ Thanks for your interest in this benchmark.
 
 ## Scope
 
-This benchmark tests whether multimodal assistants update to current
+This benchmark tests whether AI wearable assistants update to current
 context instead of staying anchored to prior context. It is narrow on
 purpose. Contributions that fit that scope are welcome. Contributions
 that broaden the benchmark into general assistant evaluation, coaching

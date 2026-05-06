@@ -53,7 +53,7 @@ once a public 1.0.0 is cut.
 Initial public release.
 
 - Wearable Assistant Context Bench framework for cross-turn reference
-  resolution evaluation across multimodal AI assistants used actively
+  resolution evaluation across AI wearable assistants used actively
   for advice or coaching.
 - 70-scenario bank split into a 50-scenario `main` subset and a
   20-scenario `contrast` pack.

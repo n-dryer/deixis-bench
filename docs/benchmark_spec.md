@@ -15,7 +15,7 @@ model resolves the user's reference (their "this", "that", or "it")
 to the current video frame instead of staying anchored to an earlier
 one.
 
-An in-the-moment multimodal coach lives in a continuous stream. The
+An in-the-moment wearable coach lives in a continuous stream. The
 user puts down one object and picks up another. The user moves from
 the workbench to the kitchen. The pan was empty a minute ago and now
 holds simmering sauce. Each turn is a new chance for the model to
