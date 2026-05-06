@@ -26,21 +26,21 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 
 ## Results
 
-Initial Gemini sweep, 2026-05-06. Three runs, 166 tasks each, three prompt conditions per run, single trial per cell. The judge is Gemini 2.5 Flash Lite for every run; cross-family judging will follow once additional provider credits are available, so these numbers should be read as **directional within-family**, not as a definitive cross-family ranking.
+Initial sweep, 2026-05-06. Three runs, 166 tasks each, three prompt conditions per run, single trial per cell. We report scores under two judges: Gemini Flash Lite (within-family) and Codex's own model (cross-family). Cross-family numbers are more credible for ranking.
 
-| Run | Candidate | Judge | Primary score (95% CI) | Current recall | Prior recall |
-|---|---|---|---|---|---|
-| **baseline-flash** | `gemini/gemini-2.5-flash` | `gemini/gemini-2.5-flash-lite` | **69.9% (60.6–79.2)** | 84.8% | 55.0% |
-| **baseline-flash-lite** | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | **54.1% (44.9–63.4)** | 78.3% | 30.0% |
-| **no-camera** | `gemini/gemini-2.5-flash-lite` (`--no-camera`) | `gemini/gemini-2.5-flash-lite` | **17.0% (9.2–24.8)** | 6.5% | 27.5% |
+| Run | Candidate | Gemini-judge primary (95% CI) | Codex-judge primary (95% CI) |
+|---|---|---|---|
+| **baseline-flash** | `gemini/gemini-2.5-flash` | **69.9% (60.6-79.2)** | **82.2% (74.1-90.3)** |
+| **baseline-flash-lite** | `gemini/gemini-2.5-flash-lite` | **54.1% (44.9-63.4)** | **77.6% (68.7-86.4)** |
+| **no-camera** | `gemini/gemini-2.5-flash-lite` (`--no-camera`) | **17.0% (9.2-24.8)** | **2.3% (0.0-5.5)** |
 
 Primary score is `mean(current_recall, prior_recall)` under the `baseline` prompt condition, with `current` and `prior` as TP / (TP + FN) class recall (not overall accuracy).
 
 What the table shows:
 
-- **Camera channel matters.** Stripping `[Camera: ...]` blocks from the same Flash Lite candidate drops the primary score from **54.1% → 17.0%** — a 37-point gap that's the basic validity signal that the task depends on visual context.
-- **Bigger model is better, within family.** Flash beats Flash Lite by **+15.8 points** (69.9% vs 54.1%) on the same judge.
-- **Both models anchor to the current frame.** `current` recall (78–85%) is much higher than `prior` recall (30–55%). When the gold answer is from an earlier scene, both models miss it more often than they get it. That's the specific failure mode the benchmark targets.
+- **Camera channel matters.** Stripping `[Camera: ...]` blocks from the same Flash Lite candidate drops the primary score from **54.1% to 17.0%** under Gemini judging and from **77.6% to 2.3%** under Codex judging.
+- **Bigger model is better under both judges.** Flash beats Flash Lite by **+15.8 points** under Gemini judging and **+4.7 points** under Codex judging.
+- **The judges diverge on absolute calibration.** Codex gives higher baseline scores for camera-enabled runs but is much harsher on the no-camera ablation, which makes the camera-channel validity signal stronger.
 - **`clarify` and `abstain` rates are reported separately** in each run's `findings.md`; they are auxiliary diagnostics, not part of the primary score.
 
 Reproduce locally:
