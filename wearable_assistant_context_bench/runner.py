@@ -2,11 +2,9 @@
 
 Implements the cross-turn reference-resolution task over the task
 set. Each task is a 2-turn conversation; on Turn 2 the runner
-labels the candidate's response with the LLM judge. When
-``enable_repair`` is set, a Turn 2 failure triggers a templated Turn 3
-repair prompt and the response is labeled again. Per-trial transcripts
-are written as JSONL alongside ``findings.md`` and ``summary.json``,
-all containing a reproducibility manifest.
+labels the candidate's response with the LLM judge. Per-trial
+transcripts are written as JSONL alongside ``findings.md`` and
+``summary.json``, all containing a reproducibility manifest.
 
 Candidate and judge models are selected via CLI flags (``--model``,
 ``--judge-model``, ``--judge-family``, ``--trials``, ``--output-dir``,
@@ -87,9 +85,7 @@ class JudgeLike(Protocol):
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DATA_DIR = REPO_ROOT / "data"
 PACKAGED_DATA_DIR = files("wearable_assistant_context_bench").joinpath("data")
-DATA_DIR: ResourcePath = (
-    SOURCE_DATA_DIR if SOURCE_DATA_DIR.is_dir() else PACKAGED_DATA_DIR
-)
+DATA_DIR: ResourcePath = SOURCE_DATA_DIR if SOURCE_DATA_DIR.is_dir() else PACKAGED_DATA_DIR
 DEFAULT_OUTPUT_DIR = Path.cwd() / "runs" / "latest"
 
 
@@ -127,17 +123,6 @@ CONFIG: dict[str, Any] = {
     "output_dir": str(DEFAULT_OUTPUT_DIR),
     "ranking_condition": DEFAULT_RANKING_CONDITION,
     "no_camera": False,
-    # `named` uses task.repair_prompt_named (floor metric:
-    # maximally specific user correction). `deictic` uses
-    # task.repair_prompt_deictic when populated and falls
-    # back to named for tasks where a deictic gesture cannot
-    # resolve the reference (absent_referent, cross_session_reference,
-    # gold_label != current).
-    "repair_style": "named",
-    # Turn 3 repair is opt-in. When False (default), a Turn 2 failure
-    # is recorded as-is with no repair attempt. When True, the runner
-    # fires the templated repair anchor and labels the Turn 3 response.
-    "enable_repair": False,
     # Retained for forward-compat: every task records task_set="main"
     # in the unified 166-task set. The runner loads all tasks
     # regardless of this value.
@@ -193,11 +178,6 @@ class Task:
         turn_1_user: str
         turn_2_scene_description: str          # camera description at T2
         turn_2_user: str
-        repair_prompt_named: str  # named repair (floor metric)
-        repair_prompt_deictic: str | None  # deictic-only repair
-            for visible-referent tasks; None when a deictic gesture
-            wouldn't resolve the reference (absent_referent,
-            cross_session_reference, gold_label other than current)
         notes: str  # optional
         reference_answers:
             current_answers: list[str]
@@ -216,18 +196,14 @@ class Task:
     turn_1_user: str
     turn_2_scene_description: str
     turn_2_user: str
-    repair_prompt_named: str
     task_set: str = "main"
     pre_turn_context_scene_description: str | None = None
     time_gap_bucket: str | None = None
     notes: str = ""
-    repair_prompt_deictic: str | None = None
     reference_answers: AnswerSet = field(default_factory=AnswerSet)
 
 
-def load_tasks(
-    path: ResourcePath = TASKS_PATH, task_set: str | None = None
-) -> list[Task]:
+def load_tasks(path: ResourcePath = TASKS_PATH, task_set: str | None = None) -> list[Task]:
     """Load tasks from ``tasks.jsonl``, optionally filtered by task_set.
 
     Each line is one JSON object. When ``task_set`` is non-None, only
@@ -262,11 +238,11 @@ def load_tasks(
                     turn_1_user=entry["turn_1_user"],
                     turn_2_scene_description=entry["turn_2_scene_description"],
                     turn_2_user=entry["turn_2_user"],
-                    repair_prompt_named=entry["repair_prompt_named"],
-                    pre_turn_context_scene_description=entry.get("pre_turn_context_scene_description"),
+                    pre_turn_context_scene_description=entry.get(
+                        "pre_turn_context_scene_description"
+                    ),
                     time_gap_bucket=entry.get("time_gap_bucket"),
                     notes=entry.get("notes", ""),
-                    repair_prompt_deictic=entry.get("repair_prompt_deictic"),
                     reference_answers=reference_answers,
                 )
             )
@@ -360,7 +336,6 @@ def _build_manifest(
         "trials": int(effective_config["trials_per_cell"]),
         "temperature": float(effective_config["temperature"]),
         "ranking_condition": effective_config["ranking_condition"],
-        "enable_repair": bool(effective_config.get("enable_repair", False)),
         "timestamp_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "runner_git_commit": _current_git_commit(),
         "random_seed": None,
@@ -434,8 +409,6 @@ def run(
     output_dir.mkdir(parents=True, exist_ok=True)
     transcript_path = output_dir / "transcripts.jsonl"
 
-    enable_repair = bool(effective_config.get("enable_repair", False))
-
     results: list[dict] = []
     with transcript_path.open("w", encoding="utf-8") as transcript_file:
         for task in tasks:
@@ -451,8 +424,6 @@ def run(
                         ranking_judge=ranking_judge_,
                         model_config=model_config,
                         no_camera=bool(effective_config.get("no_camera", False)),
-                        repair_style=effective_config.get("repair_style", "named"),
-                        enable_repair=enable_repair,
                     )
                     results.append(result)
                     transcript_file.write(json.dumps(result, ensure_ascii=False) + "\n")
@@ -489,20 +460,6 @@ def run(
     return results
 
 
-def _resolve_repair_anchor(task: Task, repair_style: str) -> tuple[str, str]:
-    """Return ``(anchor_text, resolved_style)`` for the Turn 3 repair.
-
-    ``repair_style="named"`` always uses ``task.repair_prompt_named``.
-    ``repair_style="deictic"`` uses ``task.repair_prompt_deictic``
-    when populated and falls back to the named anchor otherwise (for
-    tasks where a deictic gesture cannot resolve the reference,
-    e.g. absent_referent or cross_session_reference).
-    """
-    if repair_style == "deictic" and task.repair_prompt_deictic:
-        return task.repair_prompt_deictic, "deictic"
-    return task.repair_prompt_named, "named"
-
-
 def _run_one_trial(
     *,
     task: Task,
@@ -514,8 +471,6 @@ def _run_one_trial(
     model_config: ModelConfig,
     no_camera: bool = False,
     ranking_judge: JudgeLike | None = None,
-    repair_style: str = "named",
-    enable_repair: bool = False,
 ) -> dict:
     """Run one (task, condition, trial) cell end-to-end.
 
@@ -523,15 +478,15 @@ def _run_one_trial(
     blocks from every user message and skips injecting the
     ``pre_turn_context_scene_description`` standalone message. The candidate sees only the
     user's spoken text. Used for camera channel ablation runs.
-
-    When ``enable_repair`` is False (the default), a Turn 2 failure is
-    recorded as-is and no Turn 3 message is sent. When True, the runner
-    fires the templated repair anchor and labels the Turn 3 response.
     """
     messages: list[dict[str, str]] = []
     # Pre-conversation camera state (only set on cross_session_reference tasks)
     if task.pre_turn_context_scene_description and not no_camera:
-        messages.append(_build_pre_turn_context_scene_description_message(task.pre_turn_context_scene_description))
+        messages.append(
+            _build_pre_turn_context_scene_description_message(
+                task.pre_turn_context_scene_description
+            )
+        )
     messages.append(
         _build_message(
             role="user",
@@ -592,44 +547,6 @@ def _run_one_trial(
             ground_truth_context=ground_truth_context,
         )
 
-    turn_3_response: str | None = None
-    turn_3_verdict: JudgeVerdict | None = None
-    turn_3_passed: bool | None = None
-    repair_attempted = False
-    turn_3_ranking_verdict: JudgeVerdict | None = None
-
-    repair_anchor_text, resolved_repair_style = _resolve_repair_anchor(task, repair_style)
-
-    if enable_repair and not turn_2_passed:
-        repair_attempted = True
-        messages.append({"role": "assistant", "content": turn_2_response})
-        messages.append({"role": "user", "content": repair_anchor_text})
-        turn_3_response = adapter.query(
-            messages=messages, system=condition.system_prompt, config=model_config
-        )
-        turn_3_verdict = judge.label(
-            response=turn_3_response,
-            task_description=task_description,
-            turn_2_user=repair_anchor_text,
-            current_answers=answers.current_answers,
-            prior_answers=answers.prior_answers,
-            clarify_indicators=answers.clarify_indicators,
-            abstain_indicators=answers.abstain_indicators,
-            ground_truth_context=ground_truth_context,
-        )
-        turn_3_passed = turn_3_verdict.selected_label == task.gold_label
-        if ranking_judge is not None:
-            turn_3_ranking_verdict = ranking_judge.label(
-                response=turn_3_response,
-                task_description=task_description,
-                turn_2_user=repair_anchor_text,
-                current_answers=answers.current_answers,
-                prior_answers=answers.prior_answers,
-                clarify_indicators=answers.clarify_indicators,
-                abstain_indicators=answers.abstain_indicators,
-                ground_truth_context=ground_truth_context,
-            )
-
     result: dict[str, Any] = {
         "task_id": task.task_id,
         "task_set": task.task_set,
@@ -650,13 +567,6 @@ def _run_one_trial(
         "turn_2_judge_label": judge_verdict.selected_label,
         "turn_2_judge_rationale": judge_verdict.rationale,
         "turn_2_passed": turn_2_passed,
-        "turn_3_repair_attempted": repair_attempted,
-        "repair_prompt_named": (repair_anchor_text if repair_attempted else None),
-        "turn_3_repair_style": (resolved_repair_style if repair_attempted else None),
-        "turn_3_response": turn_3_response,
-        "turn_3_judge_label": (turn_3_verdict.selected_label if turn_3_verdict else None),
-        "turn_3_judge_rationale": (turn_3_verdict.rationale if turn_3_verdict else None),
-        "turn_3_repair_passed": turn_3_passed,
     }
     if ranking_judge is not None:
         result["turn_2_ranking_judge_label"] = (
@@ -668,17 +578,6 @@ def _run_one_trial(
         result["turn_2_ranking_passed"] = (
             (turn_2_ranking_verdict.selected_label == task.gold_label)
             if turn_2_ranking_verdict
-            else None
-        )
-        result["turn_3_ranking_judge_label"] = (
-            turn_3_ranking_verdict.selected_label if turn_3_ranking_verdict else None
-        )
-        result["turn_3_ranking_judge_rationale"] = (
-            turn_3_ranking_verdict.rationale if turn_3_ranking_verdict else None
-        )
-        result["turn_3_ranking_repair_passed"] = (
-            (turn_3_ranking_verdict.selected_label == task.gold_label)
-            if turn_3_ranking_verdict
             else None
         )
     return result
@@ -839,34 +738,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "comparing the score against a normal run with the same model."
         ),
     )
-    parser.add_argument(
-        "--enable-repair",
-        dest="enable_repair",
-        action="store_true",
-        default=False,
-        help=(
-            "Enable Turn 3 deictic-repair on Turn 2 failure. When set, "
-            "the runner fires the templated repair anchor (named or "
-            "deictic per --repair-style) and labels the Turn 3 response. "
-            "Off by default."
-        ),
-    )
-    parser.add_argument(
-        "--repair-style",
-        dest="repair_style",
-        choices=["named", "deictic"],
-        default=None,
-        help=(
-            "Turn 3 repair anchor style. Only meaningful with "
-            "--enable-repair. `named` (default) uses the explicit "
-            "repair line that names both the intended and the wrong "
-            "objects. `deictic` uses the deictic-only anchor when "
-            "populated and falls back to named for tasks where a "
-            "deictic gesture cannot resolve the reference (e.g. "
-            "absent_referent, cross_session_reference, gold_label "
-            "!= current)."
-        ),
-    )
     return parser.parse_args(argv)
 
 
@@ -888,10 +759,6 @@ def _config_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
         overrides["output_dir"] = args.output_dir
     if getattr(args, "no_camera", False):
         overrides["no_camera"] = True
-    if getattr(args, "repair_style", None) is not None:
-        overrides["repair_style"] = args.repair_style
-    if getattr(args, "enable_repair", False):
-        overrides["enable_repair"] = True
     return overrides
 
 

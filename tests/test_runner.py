@@ -98,7 +98,6 @@ def _make_task(
     turn_1_user: str = "How do I use this?",
     turn_2_scene_description: str | None = "Hand on a wooden grip with a heavy head.",
     turn_2_user: str = "What about now?",
-    repair_prompt_named: str = "I mean the object I'm holding now.",
     pre_turn_context_scene_description: str | None = None,
     task_set: str = "main",
     reference_answers: AnswerSet | None = None,
@@ -114,7 +113,6 @@ def _make_task(
         turn_1_user=turn_1_user,
         turn_2_scene_description=turn_2_scene_description or "",
         turn_2_user=turn_2_user,
-        repair_prompt_named=repair_prompt_named,
         pre_turn_context_scene_description=pre_turn_context_scene_description,
         task_set=task_set,
         reference_answers=reference_answers or AnswerSet(),
@@ -164,62 +162,9 @@ def test_run_produces_expected_trial_count_and_jsonl_shape(tmp_path: Path) -> No
             "turn_2_code_signals",
             "turn_2_judge_label",
             "turn_2_passed",
-            "turn_3_repair_attempted",
-            "turn_3_repair_passed",
         ):
             assert required in payload, f"missing {required} in transcript row"
         assert payload["task_set"] == "main"
-
-
-def test_run_default_repair_disabled_records_no_repair_attempts(
-    tmp_path: Path,
-) -> None:
-    """With ``enable_repair`` False (default), Turn 2 failures must NOT
-    trigger a repair turn."""
-    adapter = _StubAdapter()
-
-    class _AlwaysWrongJudge(_StubJudge):
-        def label(self, **kwargs: Any) -> Any:
-            from wearable_assistant_context_bench.llm_judge import JudgeVerdict
-
-            return JudgeVerdict(selected_label="abstain", rationale="stub")
-
-    judge = _AlwaysWrongJudge()
-    output_dir = tmp_path / "no_repair"
-    results = run_module.run(
-        adapter=adapter,
-        judge=judge,
-        config={"output_dir": str(output_dir)},
-    )
-    repair_attempts = sum(1 for r in results if r["turn_3_repair_attempted"])
-    assert repair_attempts == 0
-    for r in results:
-        assert r["turn_3_response"] is None
-        assert r["turn_3_repair_passed"] is None
-
-
-def test_run_with_enable_repair_fires_turn_3(tmp_path: Path) -> None:
-    """When ``enable_repair`` is True, Turn 2 failures trigger Turn 3."""
-    adapter = _StubAdapter()
-
-    class _AlwaysWrongJudge(_StubJudge):
-        def label(self, **kwargs: Any) -> Any:
-            from wearable_assistant_context_bench.llm_judge import JudgeVerdict
-
-            return JudgeVerdict(selected_label="abstain", rationale="stub")
-
-    judge = _AlwaysWrongJudge()
-    output_dir = tmp_path / "with_repair"
-    results = run_module.run(
-        adapter=adapter,
-        judge=judge,
-        config={"output_dir": str(output_dir), "enable_repair": True},
-    )
-    repair_attempts = sum(1 for r in results if r["turn_3_repair_attempted"])
-    # Every failure should trigger a repair attempt.
-    fails = sum(1 for r in results if not r["turn_2_passed"])
-    assert repair_attempts == fails
-    assert repair_attempts > 0
 
 
 def test_run_output_dir_governs_findings_location(tmp_path: Path) -> None:
@@ -261,7 +206,6 @@ def test_run_emits_summary_json(tmp_path: Path) -> None:
     assert "per_class_recall" in payload
     assert "per_task_set_recall" in payload
     assert "config_snapshot" in payload
-    assert payload["config_snapshot"]["enable_repair"] is False
 
 
 def test_parse_args_accepts_all_flags() -> None:
@@ -298,7 +242,6 @@ def test_parse_args_defaults_are_none() -> None:
     assert args.judge_family is None
     assert args.trials is None
     assert args.output_dir is None
-    assert args.enable_repair is False
 
 
 def test_config_overrides_from_args_only_sets_provided_flags() -> None:
@@ -320,7 +263,6 @@ def test_config_overrides_from_args_full() -> None:
             "1",
             "--output-dir",
             "out/",
-            "--enable-repair",
         ]
     )
     overrides = run_module._config_overrides_from_args(args)
@@ -330,7 +272,6 @@ def test_config_overrides_from_args_full() -> None:
         "judge_family": "gemini",
         "trials_per_cell": 1,
         "output_dir": "out/",
-        "enable_repair": True,
     }
 
 
@@ -380,7 +321,6 @@ def test_manifest_records_run_metadata(tmp_path: Path) -> None:
     assert match is not None
     payload = json.loads(match.group(1))
     assert payload["camera_injection"] is True
-    assert payload["enable_repair"] is False
     assert payload["task_set"] == "main"
     assert "ranking_judge_model" in payload
     assert "ranking_judge_family" in payload
@@ -435,76 +375,6 @@ def test_run_records_ranking_judge_fields_when_ranking_judge_provided(
     assert "Observed agreement" in findings_body
 
 
-def test_resolve_repair_anchor_named_default() -> None:
-    task = _make_task(
-        repair_prompt_named="named anchor",
-    )
-    task.repair_prompt_deictic = "deictic anchor"
-    text, style = run_module._resolve_repair_anchor(task, "named")
-    assert text == "named anchor"
-    assert style == "named"
-
-
-def test_resolve_repair_anchor_deictic_when_populated() -> None:
-    task = _make_task(repair_prompt_named="named anchor")
-    task.repair_prompt_deictic = "deictic anchor"
-    text, style = run_module._resolve_repair_anchor(task, "deictic")
-    assert text == "deictic anchor"
-    assert style == "deictic"
-
-
-def test_resolve_repair_anchor_deictic_falls_back_when_absent() -> None:
-    """absent_referent / cross_session_reference tasks have no
-    deictic anchor; the runner falls back to named."""
-    task = _make_task(
-        shift_type="absent_referent",
-        gold_label="prior",
-        repair_prompt_named="named only",
-    )
-    task.repair_prompt_deictic = None
-    text, style = run_module._resolve_repair_anchor(task, "deictic")
-    assert text == "named only"
-    assert style == "named"
-
-
-def test_parse_args_accepts_repair_style_flag() -> None:
-    args = run_module._parse_args(["--repair-style", "deictic"])
-    assert args.repair_style == "deictic"
-    overrides = run_module._config_overrides_from_args(args)
-    assert overrides == {"repair_style": "deictic"}
-
-
-def test_committed_main_task_set_has_deictic_for_visible_current_tasks() -> None:
-    tasks = run_module.load_tasks(task_set="main")
-    visible = {
-        "object_in_hand",
-        "object_in_view",
-        "object_state",
-        "screen_content",
-        "sequential_task",
-        "location",
-    }
-    missing = [
-        s.task_id
-        for s in tasks
-        if s.gold_label == "current"
-        and s.shift_type in visible
-        and not s.repair_prompt_deictic
-    ]
-    assert not missing
-
-
-def test_committed_main_task_set_omits_deictic_for_non_visible_tasks() -> None:
-    tasks = run_module.load_tasks(task_set="main")
-    bad = [
-        s.task_id
-        for s in tasks
-        if s.shift_type in {"absent_referent", "cross_session_reference"}
-        and s.repair_prompt_deictic
-    ]
-    assert not bad
-
-
 def test_parse_args_accepts_ranking_judge_flags() -> None:
     args = run_module._parse_args(
         [
@@ -528,7 +398,6 @@ def test_load_runtime_config_reads_json_file() -> None:
     returns a dict that includes the expected keys."""
     cfg = run_module.load_runtime_config()
     assert cfg["trials_per_cell"] == 1
-    assert cfg["enable_repair"] is False
     assert cfg["task_set"] == "main"
 
 
@@ -566,7 +435,9 @@ def test_camera_block_format_is_exact() -> None:
 
 
 def test_pre_turn_context_scene_description_message_is_user_only_camera_block() -> None:
-    msg = _build_pre_turn_context_scene_description_message("A workbench with several tools laid out.")
+    msg = _build_pre_turn_context_scene_description_message(
+        "A workbench with several tools laid out."
+    )
     assert msg["role"] == "user"
     assert msg["content"] == "[Camera: A workbench with several tools laid out.]"
     assert "\n" not in msg["content"]

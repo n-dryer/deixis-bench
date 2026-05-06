@@ -33,10 +33,9 @@ REQUIRED_FIELDS = {
     "turn_1_user",
     "turn_2_scene_description",
     "turn_2_user",
-    "repair_prompt_named",
     "reference_answers",
 }
-OPTIONAL_FIELDS = {"time_gap_bucket", "notes", "repair_prompt_deictic"}
+OPTIONAL_FIELDS = {"time_gap_bucket", "notes"}
 
 ALLOWED_GOLD_LABELS = {"current", "prior", "clarify", "abstain"}
 ALLOWED_SHIFT_TYPES = {
@@ -114,9 +113,7 @@ def test_task_ids_are_unique(all_records: list[dict]) -> None:
 def test_task_ids_follow_format(all_records: list[dict]) -> None:
     for entry in all_records:
         sid = entry["task_id"]
-        assert TASK_ID_PATTERN.match(sid), (
-            f"task_id {sid!r} does not match `task-NNN` format"
-        )
+        assert TASK_ID_PATTERN.match(sid), f"task_id {sid!r} does not match `task-NNN` format"
 
 
 def test_gold_labels_in_allowed_set(all_records: list[dict]) -> None:
@@ -162,7 +159,6 @@ def test_required_string_fields_are_non_empty(all_records: list[dict]) -> None:
             "turn_1_user",
             "turn_2_scene_description",
             "turn_2_user",
-            "repair_prompt_named",
             "domain",
         ):
             value = entry[field_name]
@@ -179,7 +175,9 @@ def test_pre_turn_context_scene_description_is_string_or_null(all_records: list[
         )
 
 
-def test_cross_session_reference_has_pre_turn_context_scene_description(all_records: list[dict]) -> None:
+def test_cross_session_reference_has_pre_turn_context_scene_description(
+    all_records: list[dict],
+) -> None:
     """``cross_session_reference`` tasks must have a non-null pre_turn_context_scene_description."""
     for entry in all_records:
         if entry["shift_type"] != "cross_session_reference":
@@ -202,7 +200,9 @@ def test_every_task_has_inline_reference_answers(all_records: list[dict]) -> Non
             "abstain_indicators",
         ):
             assert key in reference_answers, f"{sid}: missing reference_answers.{key}"
-            assert isinstance(reference_answers[key], list), f"{sid}.reference_answers.{key}: must be a list"
+            assert isinstance(reference_answers[key], list), (
+                f"{sid}.reference_answers.{key}: must be a list"
+            )
 
 
 def test_current_label_has_three_plus_current_answers(

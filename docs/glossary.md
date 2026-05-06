@@ -15,8 +15,6 @@ README. Task creation rules live in [`task_authoring.md`](task_authoring.md).
 | domain | Activity area for coverage reporting, such as `kitchen`, `workshop`, or `finance`. |
 | difficulty | Author-assigned difficulty: `easy`, `medium`, or `hard`. |
 | `shift_type` | Context-shift category between Turn 1 and Turn 2. |
-| `repair_prompt_named` | Optional Turn 3 repair prompt that names the intended context explicitly. |
-| `repair_prompt_deictic` | Optional Turn 3 repair prompt that uses deictic language such as "this" or "what I am holding now." |
 | `context_selection_instruction` | Prompt condition that tells the model to choose the relevant context before answering. |
 | `pre_answer_context_scaffold` | Prompt condition that asks the model to output a brief relevant-context line before the answer. |
 | official result | A curated benchmark run generated after the task set, prompts, judge prompt, and manifest are locked. |

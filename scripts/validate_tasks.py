@@ -157,11 +157,7 @@ def _load_tasks_jsonl(path: Path) -> list[dict]:
 
 def check_1_token_leakage(tasks):
     """Check 1: No ``current_answers`` or ``prior_answers`` token appears in
-    any user speech field (including the optional deictic repair anchor).
-
-    The named repair anchor (``repair_prompt_named``) is exempt because
-    it deliberately names the intended and wrong objects to measure
-    floor recoverability.
+    any user speech field.
     """
     fails = []
     for sc in tasks:
@@ -171,9 +167,6 @@ def check_1_token_leakage(tasks):
             ("turn_1_user", sc.get("turn_1_user", "") or ""),
             ("turn_2_user", sc.get("turn_2_user", "") or ""),
         ]
-        deictic = sc.get("repair_prompt_deictic")
-        if deictic:
-            speech_fields.append(("repair_prompt_deictic", deictic))
         for field_name, text in speech_fields:
             for token in reference_answers.get("current_answers", []):
                 if word_match(token, text):
@@ -202,7 +195,10 @@ def check_2_object_name_in_images(tasks):
     for sc in tasks:
         sid = sc["task_id"]
         image_fields = [
-            ("pre_turn_context_scene_description", sc.get("pre_turn_context_scene_description") or ""),
+            (
+                "pre_turn_context_scene_description",
+                sc.get("pre_turn_context_scene_description") or "",
+            ),
             ("turn_1_scene_description", sc.get("turn_1_scene_description") or ""),
             ("turn_2_scene_description", sc.get("turn_2_scene_description") or ""),
         ]
@@ -242,7 +238,6 @@ def check_3_schema_validation(tasks, enforce_distribution: bool = True):
         "turn_1_user",
         "turn_2_scene_description",
         "turn_2_user",
-        "repair_prompt_named",
         "reference_answers",
     }
     valid_gold_label = {"current", "prior", "clarify", "abstain"}
@@ -316,7 +311,9 @@ def check_3_schema_validation(tasks, enforce_distribution: bool = True):
                 }
             )
         # cross_session_reference must have non-null pre_turn_context_scene_description
-        if sc.get("shift_type") == "cross_session_reference" and not sc.get("pre_turn_context_scene_description"):
+        if sc.get("shift_type") == "cross_session_reference" and not sc.get(
+            "pre_turn_context_scene_description"
+        ):
             fails.append(
                 {
                     "task_id": sid,
@@ -512,9 +509,7 @@ def check_6_duplication(tasks):
     fails = []
     seen_t2_user: dict[str, str] = {}
     seen_t2_image: dict[str, str] = {}
-    seen_signatures: Counter[
-        tuple[str | None, str | None, str | None, str | None]
-    ] = Counter()
+    seen_signatures: Counter[tuple[str | None, str | None, str | None, str | None]] = Counter()
 
     for sc in tasks:
         sid = sc["task_id"]

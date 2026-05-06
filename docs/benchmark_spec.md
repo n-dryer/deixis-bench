@@ -49,7 +49,7 @@ Each task splits its content between what the candidate model sees and what the 
 
 | Channel | Field(s) | Visible to candidate | Visible to judge |
 |---|---|---|---|
-| Audio | `turn_1_user`, `turn_2_user`, `repair_prompt_named` | Yes | Yes |
+| Audio | `turn_1_user`, `turn_2_user` | Yes | Yes |
 | Camera | `pre_turn_context_scene_description`, `turn_1_scene_description`, `turn_2_scene_description` | Yes (as `[Camera: ...]` blocks) | Yes |
 | Ground truth | `current_answers`, `prior_answers`, `clarify_indicators`, `abstain_indicators` | No | Yes |
 
@@ -68,26 +68,14 @@ For the rules that govern how each input field is written, see
 
 ## Task structure
 
-Each task has three turns:
+Each task is a two-turn conversation:
 
 1. **Turn 1.** Optional `pre_turn_context_scene_description` injected first (only on
    `cross_session_reference` tasks), then `turn_1_scene_description` plus
    `turn_1_user`. Turn 1 establishes the starting state.
 2. **Turn 2.** `turn_2_scene_description` plus `turn_2_user`. The image has
    changed. The user's question is natural and deictic; it does not
-   announce the change. **Turn 2 is the only turn that contributes
-   to the primary metric.**
-3. **Turn 3.** `repair_prompt_named`. Opt-in via `--enable-repair`
-   (default off). When enabled and the candidate misses Turn 2, the
-   anchor is sent as a follow-up; the judge labels the Turn 3
-   response the same way it labels Turn 2.
-
-**Repair rate.** When `--enable-repair` is set and the model gets
-Turn 2 wrong, the user clarifies with a follow-up like "I mean the
-hammer I'm holding now, not the one from before." The repair rate is
-how often the model fixes its answer after this kind of correction.
-Default runs (without `--enable-repair`) record the Turn 2 outcome
-as-is and the repair-rate section is omitted from the report.
+   announce the change. **Turn 2 is the only scored turn.**
 
 Field reference is in [`schema.md`](schema.md).
 
@@ -207,25 +195,6 @@ Gemini); the mapping is in `resolve_judge_family` in
 `wearable_assistant_context_bench/llm_judge.py`. Pass
 `--judge-family claude|gemini|openai` to override.
 
-## Repair turn (Turn 3)
-
-Turn 3 is opt-in via `--enable-repair`. When the flag is set and the
-candidate misses on Turn 2, the runner appends the repair anchor as
-a follow-up user message. The repair anchor names the intended frame
-explicitly (for example, `"I mean the hammer I'm holding now, not
-the screwdriver from before"`). The judge labels the Turn 3 response
-the same way it labeled Turn 2.
-
-`--repair-style {named,deictic}` controls the anchor: `named`
-(default) uses the explicit `repair_prompt_named`; `deictic` uses
-`repair_prompt_deictic` when populated and falls back to
-`named` for tasks where a deictic gesture cannot resolve the
-reference (`absent_referent`, `cross_session_reference`,
-gold_label other than `current`).
-
-The repair rate is the fraction of Turn 2 misses that pass on Turn 3.
-With repair disabled (the default), the report omits this section.
-
 ## Reproducibility
 
 Each run emits a manifest recorded in the findings output. The
@@ -239,8 +208,7 @@ manifest fields include:
 - `judge_prompt_sha256`: judge prompt identification
 - `candidate_model`, `judge_model`, `judge_family`,
   `judge_family_resolution`: model and resolution mode
-- `trials`, `temperature`, `ranking_condition`, `enable_repair`: run
-  parameters
+- `trials`, `temperature`, `ranking_condition`: run parameters
 - `timestamp_utc`, `runner_git_commit`: run identity
 
 The repo commits `data/MANIFEST.lock.json` with the SHA256 hashes of
@@ -265,7 +233,6 @@ follows Ego4D narrations (Grauman et al., CVPR 2022).
 The runner loads its defaults from `data/config.json`. Key defaults:
 
 - `trials_per_cell: 1`
-- `enable_repair: false`. The Turn 3 repair turn is opt-in.
 - `task_set: "main"` for every active task.
 - `temperature: 0.0`.
 

@@ -103,15 +103,14 @@ flowchart LR
 
 The benchmark is a text-mediated visual context evaluation. It does not send raw audio, images, or video to the candidate model. Audio is represented as user transcript text. Video is represented as scene-description text injected into user turns as `[Camera: ...]` blocks.
 
-Each task has three possible turns:
+Each task is a two-turn conversation:
 
 | Turn | Role |
 |---|---|
 | Turn 1 | Establishes the starting scene and user request |
 | Turn 2 | Changes the visible context and asks the scored follow-up question |
-| Turn 3 | Optional repair prompt used only when `--enable-repair` is set |
 
-Turn 2 is the primary scored turn. Turn 3 is a recovery diagnostic, not part of the headline score unless repair is explicitly enabled.
+Turn 2 is the only scored turn.
 
 The candidate model sees only the user transcript and scene-description text. The judge sees the same conversation plus judge-only reference answers. The candidate never sees the reference answers, `gold_label` value, shift type, authoring notes, or other privileged metadata.
 

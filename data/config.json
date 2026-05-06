@@ -8,7 +8,5 @@
   "trials_per_cell": 1,
   "ranking_condition": "baseline",
   "no_camera": false,
-  "repair_style": "named",
-  "enable_repair": false,
   "task_set": "main"
 }

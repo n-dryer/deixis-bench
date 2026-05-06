@@ -34,7 +34,6 @@ from wearable_assistant_context_bench.aggregation import (
     per_policy_pass_rate_by_condition,
     recall_by_shift_type,
     recall_by_task_set,
-    simulated_repair_rate_by_condition,
     task_by_condition_matrix,
     wilson_interval,
 )
@@ -232,8 +231,6 @@ def _trial(
     turn_2_passed: bool,
     turn_2_judge_label: str | None = None,
     turn_2_code_signals: dict | None = None,
-    turn_3_repair_attempted: bool = False,
-    turn_3_repair_passed: bool | None = None,
     task_set: str = "main",
     shift_type: str = "object_in_hand",
 ) -> dict:
@@ -251,8 +248,6 @@ def _trial(
             else (gold_label if turn_2_passed else "abstain")
         ),
         "turn_2_code_signals": turn_2_code_signals or {},
-        "turn_3_repair_attempted": turn_3_repair_attempted,
-        "turn_3_repair_passed": turn_3_repair_passed,
     }
 
 
@@ -260,13 +255,13 @@ def _fixture_results() -> list[dict]:
     """Mini fixture: one ``prior`` task (task-003) and three ``current``
     tasks (task-001, task-002, task-004). Two trials per cell. All main task_set."""
     results: list[dict] = []
-    prior_cells: list[tuple[str, list[bool], list[bool | None]]] = [
-        ("baseline", [False, False], [True, False]),
-        ("context_selection_instruction", [True, False], [None, True]),
-        ("pre_answer_context_scaffold", [True, True], [None, None]),
+    prior_cells: list[tuple[str, list[bool]]] = [
+        ("baseline", [False, False]),
+        ("context_selection_instruction", [True, False]),
+        ("pre_answer_context_scaffold", [True, True]),
     ]
-    for condition, passes, repairs in prior_cells:
-        for i, (passed, repaired) in enumerate(zip(passes, repairs, strict=False)):
+    for condition, passes in prior_cells:
+        for i, passed in enumerate(passes):
             results.append(
                 _trial(
                     task_id="task-003",
@@ -274,8 +269,6 @@ def _fixture_results() -> list[dict]:
                     trial=i,
                     gold_label="prior",
                     turn_2_passed=passed,
-                    turn_3_repair_attempted=(not passed),
-                    turn_3_repair_passed=repaired,
                 )
             )
     current_plan = {
@@ -305,8 +298,6 @@ def _fixture_results() -> list[dict]:
                         trial=i,
                         gold_label="current",
                         turn_2_passed=passed,
-                        turn_3_repair_attempted=(not passed),
-                        turn_3_repair_passed=(False if not passed else None),
                     )
                 )
     return results
@@ -434,14 +425,6 @@ def test_clarify_and_abstain_and_coverage_rates() -> None:
     assert cov is not None and cov[0] == pytest.approx(1 / 4)
 
 
-def test_simulated_repair_rate_uses_failures_as_denominator() -> None:
-    repair = simulated_repair_rate_by_condition(_fixture_results())
-    assert repair["baseline"].failures == 4
-    assert repair["baseline"].repaired == 1
-    assert repair["pre_answer_context_scaffold"].failures == 0
-    assert repair["pre_answer_context_scaffold"].rate is None
-
-
 def test_code_judge_disagreement_counts_per_task() -> None:
     results = [
         {
@@ -458,8 +441,6 @@ def test_code_judge_disagreement_counts_per_task() -> None:
                 "has_abstain": False,
                 "is_refusal": False,
             },
-            "turn_3_repair_attempted": False,
-            "turn_3_repair_passed": None,
         },
         {
             "task_id": "task-004",
@@ -475,8 +456,6 @@ def test_code_judge_disagreement_counts_per_task() -> None:
                 "has_abstain": False,
                 "is_refusal": False,
             },
-            "turn_3_repair_attempted": False,
-            "turn_3_repair_passed": None,
         },
     ]
     disagreements = code_judge_disagreement_by_task(results)
@@ -488,8 +467,7 @@ def test_task_matrix_preserves_trial_order() -> None:
     matrix = task_by_condition_matrix(_fixture_results())
     trials = matrix["task-003"]["baseline"]
     assert [entry["trial"] for entry in trials] == [0, 1]
-    assert trials[0]["turn_3_repair_passed"] is True
-    assert trials[1]["turn_3_repair_passed"] is False
+    assert all(t["turn_2_passed"] is False for t in trials)
 
 
 def test_render_findings_markdown_shape() -> None:
