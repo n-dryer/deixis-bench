@@ -72,7 +72,7 @@ Quick summary:
 - **User message** (`turn_*_user`): natural, deictic. No object
   names, no property descriptions, no shift announcements, no answer
   vocabulary.
-- **Scene description** (`turn_*_image`): scene-level features only.
+- **Scene description** (`turn_*_scene_description`): scene-level features only.
   No object names, no functional labels, no technique evaluation.
   Detailed enough that a fresh reader can identify the object with
   high confidence.
