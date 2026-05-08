@@ -1,0 +1,1112 @@
+{
+  "run_label": "no-camera-flash-lite",
+  "source_transcripts": "runs/no-camera-flash-lite/transcripts.jsonl",
+  "judged_conditions": [
+    "baseline"
+  ],
+  "n_trials_judged": 166,
+  "n_tasks_judged": 166,
+  "candidate_model": "gemini/gemini-2.5-flash-lite",
+  "judge_model": "codex-own-model",
+  "judge_family": "codex",
+  "ranking_condition": "baseline",
+  "primary_score_mean_recall": {
+    "point": 0.023369565217391305,
+    "ci_95": [
+      0.0,
+      0.05545093532810397
+    ],
+    "ci_method": "normal approximation over mean of current/prior recalls"
+  },
+  "per_class_recall": {
+    "current": {
+      "point": 0.021739130434782608,
+      "ci_95": [
+        0.0038478542580502872,
+        0.11335294521511355
+      ],
+      "tp": 1,
+      "fn": 45,
+      "n": 46
+    },
+    "prior": {
+      "point": 0.025,
+      "ci_95": [
+        0.0044268315026814095,
+        0.1288136896347409
+      ],
+      "tp": 1,
+      "fn": 39,
+      "n": 40
+    }
+  },
+  "per_task_set_recall": {
+    "main": {
+      "point": 0.023369565217391305,
+      "ci_95": [
+        0.0,
+        0.05545093532810397
+      ],
+      "ci_method": "normal approximation over mean of current/prior recalls"
+    }
+  },
+  "clarify_rate": {
+    "point": 0.5602409638554217,
+    "ci_95": [
+      0.48421751123171053,
+      0.6335393670880552
+    ]
+  },
+  "abstain_rate": {
+    "point": 0.42771084337349397,
+    "ci_95": [
+      0.35492171097023706,
+      0.5037700350460438
+    ]
+  },
+  "coverage_rate": {
+    "point": 0.012048192771084338,
+    "ci_95": [
+      0.0033102913258154093,
+      0.04285899428408123
+    ]
+  },
+  "label_counts": {
+    "current": 1,
+    "prior": 1,
+    "clarify": 93,
+    "abstain": 71
+  },
+  "confusion_matrix": {
+    "current": {
+      "current": 1,
+      "prior": 0,
+      "clarify": 40,
+      "abstain": 5
+    },
+    "prior": {
+      "current": 0,
+      "prior": 1,
+      "clarify": 8,
+      "abstain": 31
+    },
+    "clarify": {
+      "current": 0,
+      "prior": 0,
+      "clarify": 29,
+      "abstain": 11
+    },
+    "abstain": {
+      "current": 0,
+      "prior": 0,
+      "clarify": 16,
+      "abstain": 24
+    }
+  },
+  "baseline_verdicts": [
+    {
+      "task_id": "task-001",
+      "gold_label": "current",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-002",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-003",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-004",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-005",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-006",
+      "gold_label": "current",
+      "codex_judge_label": "current",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-007",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-008",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-009",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-010",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-011",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-012",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-013",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-014",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-015",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-016",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-017",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-018",
+      "gold_label": "current",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-019",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-020",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-021",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-022",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-023",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-024",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-025",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-026",
+      "gold_label": "current",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-027",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-028",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-029",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-030",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-031",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-032",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-033",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-034",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-035",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-036",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-037",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-038",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-039",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-040",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-041",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-042",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-043",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-044",
+      "gold_label": "current",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-045",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-046",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-047",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-048",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-049",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-050",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-051",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-052",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-053",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-054",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-055",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-056",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-057",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-058",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-059",
+      "gold_label": "current",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-060",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-061",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-062",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-063",
+      "gold_label": "current",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-064",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-065",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-066",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-067",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-068",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-069",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-070",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-071",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-072",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-073",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-074",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-075",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-076",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-077",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-078",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-079",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-080",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-081",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-082",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-083",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-084",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-085",
+      "gold_label": "prior",
+      "codex_judge_label": "prior",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-086",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-087",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-088",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-089",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-090",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-091",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-092",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-093",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-094",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-095",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-096",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-097",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-098",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-099",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-100",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-101",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-102",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-103",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-104",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-105",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-106",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-107",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-108",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-109",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-110",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-111",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-112",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-113",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-114",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-115",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-116",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-117",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-118",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-119",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-120",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-121",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-122",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-123",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-124",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-125",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-126",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-127",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-128",
+      "gold_label": "clarify",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-129",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-130",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-131",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-132",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-133",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-134",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-135",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-136",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-137",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-138",
+      "gold_label": "prior",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-139",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-140",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-141",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-142",
+      "gold_label": "clarify",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-143",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-144",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-145",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-146",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-147",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-148",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-149",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-150",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-151",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-152",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-153",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-154",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "prior"
+    },
+    {
+      "task_id": "task-155",
+      "gold_label": "prior",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-156",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-157",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-158",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-159",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-160",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-161",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "clarify"
+    },
+    {
+      "task_id": "task-162",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "current"
+    },
+    {
+      "task_id": "task-163",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-164",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-165",
+      "gold_label": "abstain",
+      "codex_judge_label": "abstain",
+      "gemini_judge_label": "abstain"
+    },
+    {
+      "task_id": "task-166",
+      "gold_label": "abstain",
+      "codex_judge_label": "clarify",
+      "gemini_judge_label": "abstain"
+    }
+  ],
+  "benchmark_version": "0.1.0a0",
+  "config_snapshot": {
+    "trials": 1,
+    "temperature": 0.0,
+    "task_set": "main",
+    "no_camera": true,
+    "enable_repair": false
+  }
+}

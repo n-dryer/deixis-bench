@@ -1,0 +1,70 @@
+{
+  "run_label": "no-camera-flash-lite",
+  "n_trials": 498,
+  "n_tasks": 166,
+  "candidate_model": "gemini/gemini-2.5-flash-lite",
+  "judge_model": "gemini/gemini-2.5-flash-lite",
+  "judge_family": "gemini",
+  "ranking_condition": "baseline",
+  "primary_score_mean_recall": {
+    "point": 0.17010869565217393,
+    "ci_95": [
+      0.09226529401329737,
+      0.2479520972910505
+    ]
+  },
+  "per_class_recall": {
+    "current": {
+      "point": 0.06521739130434782,
+      "ci_95": [
+        0.022427861429288588,
+        0.17502741081904213
+      ]
+    },
+    "prior": {
+      "point": 0.275,
+      "ci_95": [
+        0.16108016247667342,
+        0.42834955806210556
+      ]
+    }
+  },
+  "per_task_set_recall": {
+    "main": {
+      "point": 0.17010869565217393,
+      "ci_95": [
+        0.09226529401329737,
+        0.2479520972910505
+      ]
+    }
+  },
+  "clarify_rate": {
+    "point": 0.608433734939759,
+    "ci_95": [
+      0.532533563529923,
+      0.6794288174456555
+    ]
+  },
+  "abstain_rate": {
+    "point": 0.19879518072289157,
+    "ci_95": [
+      0.145201725849703,
+      0.2660138825514677
+    ]
+  },
+  "coverage_rate": {
+    "point": 0.1927710843373494,
+    "ci_95": [
+      0.13998832092094893,
+      0.25945159964824516
+    ]
+  },
+  "benchmark_version": "0.1.0a0",
+  "config_snapshot": {
+    "trials": 1,
+    "temperature": 0.0,
+    "task_set": "main",
+    "no_camera": true,
+    "enable_repair": false
+  }
+}
