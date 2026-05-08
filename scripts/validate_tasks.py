@@ -406,9 +406,9 @@ def check_3_schema_validation(tasks, enforce_distribution: bool = True):
     if enforce_distribution:
         shift_type_counts = Counter(sc.get("shift_type") for sc in tasks)
         expected_shift_type_counts = {
-            "object_in_hand": 21,
+            "object_in_hand": 22,
             "object_state": 22,
-            "sequential_task": 18,
+            "sequential_task": 17,
             "location": 22,
             "object_in_view": 21,
             "absent_referent": 21,

@@ -41,9 +41,9 @@ for the full field contract.
 
 | `shift_type` | Count |
 |---|---:|
-| `object_in_hand` | 21 |
+| `object_in_hand` | 22 |
 | `object_state` | 22 |
-| `sequential_task` | 18 |
+| `sequential_task` | 17 |
 | `location` | 22 |
 | `object_in_view` | 21 |
 | `absent_referent` | 21 |

@@ -2,10 +2,16 @@
   "_about": "Allowlist of prior input-file SHAs that are content-equivalent to a current SHA for scoring purposes. Consulted by tests/test_published_runs.py when a published run's recorded SHA does not match the live file. Each entry must document the diff and a verifying reviewer so a reader can audit why the equivalence holds.",
   "tasks": {
     "1b2fe36f2d19971a4f66e9f47462bac75926b38656045ce9afb604c1fc7b1de9": {
-      "equivalent_to": "bd3611d20996a3b3d6a6a1d9c9833f36b5a287bb4f746d26cec2537777b157d1",
-      "diff_summary": "PR #31 (b31185f) dropped repair_prompt_named and repair_prompt_deictic fields from every task. These fields were only consumed by the --enable-repair flow that the same PR also removed. Candidate prompts (turn_1_user, turn_2_user, scene descriptions) and judge inputs (answer lists, gold labels) are unchanged.",
+      "equivalent_to": "89b7ee06529ea1f9ecb481d83565f91b6db6a5f1b911e2e0d881ee2e44ee7371",
+      "diff_summary": "PR #31 (b31185f) dropped repair_prompt_named and repair_prompt_deictic fields from every task; a subsequent edit reclassified task-059 (oil filter) from sequential_task to object_in_hand per the shift_type precedence rule. shift_type is judge-only metadata used only for analysis bucketing — runner.py omits it from candidate and judge prompts — so per-task scoring is unchanged.",
       "introduced_in_commit": "b31185f",
-      "verified_by": "human review 2026-05-07"
+      "verified_by": "human review 2026-05-08"
+    },
+    "bd3611d20996a3b3d6a6a1d9c9833f36b5a287bb4f746d26cec2537777b157d1": {
+      "equivalent_to": "89b7ee06529ea1f9ecb481d83565f91b6db6a5f1b911e2e0d881ee2e44ee7371",
+      "diff_summary": "Reclassified task-059 (oil filter) from sequential_task to object_in_hand per the shift_type precedence rule added to docs/task_authoring.md. The Turn 2 scene shows a different object in the hand (new filter) while the original sits in the catch basin, so object_in_hand takes precedence over sequential_task. shift_type is judge-only metadata used only for analysis bucketing — runner.py omits it from candidate and judge prompts — so per-task scoring is unchanged.",
+      "introduced_in_commit": "<this change>",
+      "verified_by": "human review 2026-05-08"
     }
   },
   "prompt_conditions": {},
