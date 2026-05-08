@@ -151,22 +151,65 @@ agreement when a shared ranking judge is configured.
 `clarify` and `abstain` rates appear in the findings output as
 auxiliary diagnostic rows. They do not enter the primary number.
 
-The deterministic helpers in
-`wearable_assistant_context_bench/scoring.py` compute auxiliary code
-signals on each response:
+### Scoring contract
 
-- `current_answers` and `prior_answers` are matched with
-  `rapidfuzz.partial_ratio` at threshold 85, case-insensitive.
-- `clarify_indicators` and `abstain_indicators` are matched with
-  case-insensitive substring containment.
-- A refusal-pattern heuristic flags hedge phrasings.
-- A contrastive-pattern suppressor demotes `has_prior` to `False`
-  when the response explicitly contrasts an earlier state with the
-  current one. The pre-suppression value is preserved as
-  `has_prior_raw`.
+The judge label is the source of truth for the benchmark score. The
+deterministic helpers in `wearable_assistant_context_bench/scoring.py`
+compute auxiliary signals on each response. They travel with the trial
+record as diagnostics and are also used as tie-breakers when the judge
+verdict cannot disambiguate.
 
-The judge label is the score. Code signals travel with the trial
-record as auxiliary diagnostics.
+The exposed helpers and their signatures are:
+
+- `fuzzy_match(response: str, targets: list[str], threshold: int = 85) -> bool`
+  Matches each target against `response` using
+  `rapidfuzz.fuzz.partial_ratio`, both sides lowercased, returning
+  `True` when any target scores at or above `threshold`. The default
+  threshold is `85`.
+- `substring_match(response: str, indicators: list[str]) -> bool`
+  Returns `True` when any indicator appears as a case-insensitive
+  substring of `response`.
+- `detect_refusal(response: str) -> bool`
+  Refusal-pattern heuristic. Tests the response against
+  `_REFUSAL_PATTERNS`, a tuple of compiled regexes covering
+  English refusal and uncertainty phrasings (`"i cannot"`, `"i can't"`,
+  `"i'm unable"`, `"i don't know"`, `"not enough information"`,
+  `"insufficient context"`, and the same set with explicit `"do not"`
+  and `"am not"` expansions). It does not flag soft hedges like
+  `"I think"` or `"I'm not sure"` on their own.
+- `has_prior(response: str, prior_answers: list[str]) -> bool`
+  Convenience wrapper around `fuzzy_match` for the prior-answer list.
+- `score_response(response, current_answers, prior_answers, clarify_indicators=None, abstain_indicators=None) -> dict`
+  Top-level entry point. Returns the dict of code signals used by the
+  runner.
+
+The returned dict has these keys:
+
+- `has_current` (bool) — `fuzzy_match(response, current_answers)`.
+- `has_prior` (bool) — `fuzzy_match(response, prior_answers)`, demoted
+  to `False` by the contrastive-pattern suppressor below.
+- `has_prior_raw` (bool) — pre-suppression `fuzzy_match` value,
+  preserved for audit trails.
+- `has_clarify` (bool) — `substring_match(response, clarify_indicators)`.
+- `has_abstain` (bool) — `substring_match(response, abstain_indicators)`.
+- `is_refusal` (bool) — `detect_refusal(response)`.
+- `response_length_tokens_est` (int) — approximate token count,
+  computed as `round(word_count * 1.3)`.
+
+The contrastive-pattern suppressor uses `_CONTRASTIVE_RE`, defined as
+
+```python
+_CONTRASTIVE_RE = re.compile(
+    r"\b(earlier|was|used to be|previously)\b.*?\b(now|currently|is)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+```
+
+When `has_prior_raw` is `True` and `_CONTRASTIVE_RE.search(response)`
+matches, `has_prior` is set to `False`. This prevents responses that
+explicitly contrast an earlier state with the current one
+("earlier it was a wrench, now it's a screwdriver") from being scored
+as prior-grounded.
 
 ## The judge
 
