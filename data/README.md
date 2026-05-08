@@ -122,6 +122,19 @@ uv run wac-bench --model gemini/gemini-2.5-flash-lite --judge-family gemini --ju
 `runs/` is the local scratch directory and is gitignored. Promote a
 run into `data/published-runs/` when it should be cited.
 
+### Reproducibility and known equivalences
+
+`tests/test_published_runs.py` recomputes the SHA256 of
+`data/tasks.jsonl`, `data/prompt_conditions.json`, and the live judge
+prompt and compares each value against the SHAs recorded in every
+published run's `findings.md` manifest. A run passes if its recorded
+SHA matches the live SHA, or if the recorded SHA appears in
+`data/published-runs/equivalent_input_sets.json` as content-equivalent
+to the live SHA. Each equivalence entry records a `diff_summary`,
+`introduced_in_commit`, and `verified_by` reviewer so the equivalence
+can be audited; entries are added only when an input-file change is
+verifiable as not affecting candidate prompts or judge inputs.
+
 ## License
 
 MIT, matching the rest of the repository.
