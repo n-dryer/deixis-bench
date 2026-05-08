@@ -88,6 +88,40 @@ uv run wac-bench --model <candidate_model_id> --output-dir runs/<run_name>
 Add `--no-camera` to strip the `[Camera: ...]` scene-description
 blocks (camera-channel ablation).
 
+## Published runs
+
+The runs that back the Results table in the top-level `README.md` are
+checked in under `data/published-runs/`. Each run directory contains
+the candidate transcripts and two judge summaries: one from a
+within-family judge (Gemini 2.5 Flash Lite) and one from a cross-family
+judge (Codex's own model).
+
+| Path | Candidate | Within-family judge | Cross-family judge | Notes |
+|---|---|---|---|---|
+| `data/published-runs/baseline-flash/` | `gemini/gemini-2.5-flash` | `gemini/gemini-2.5-flash-lite` | Codex own model | Default prompt, camera on |
+| `data/published-runs/baseline-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | Codex own model | Default prompt, camera on, same-family judge baseline |
+| `data/published-runs/no-camera-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | Codex own model | Camera channel stripped (`--no-camera`) |
+
+Each directory contains:
+
+| File | Purpose |
+|---|---|
+| `summary.json` | Aggregate metrics under the within-family (Gemini) judge. |
+| `summary-codex-judge.json` | Aggregate metrics under the cross-family (Codex) judge. |
+| `transcripts.jsonl` | Per-trial candidate inputs, candidate responses, and judge labels. |
+| `findings.md` | Human-readable per-class, per-shift-type, per-condition breakdown. |
+
+Reproduce locally:
+
+```bash
+uv run wac-bench --model gemini/gemini-2.5-flash --judge-family gemini --judge-model gemini/gemini-2.5-flash-lite --output-dir runs/baseline-flash
+uv run wac-bench --model gemini/gemini-2.5-flash-lite --judge-family gemini --judge-model gemini/gemini-2.5-flash-lite --output-dir runs/baseline-flash-lite
+uv run wac-bench --model gemini/gemini-2.5-flash-lite --judge-family gemini --judge-model gemini/gemini-2.5-flash-lite --no-camera --output-dir runs/no-camera-flash-lite
+```
+
+`runs/` is the local scratch directory and is gitignored. Promote a
+run into `data/published-runs/` when it should be cited.
+
 ## License
 
 MIT, matching the rest of the repository.
