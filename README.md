@@ -38,8 +38,8 @@ Primary score is `mean(current_recall, prior_recall)` under the `baseline` promp
 
 What the table shows:
 
-- **Camera channel matters under both judges.** Stripping `[Camera: ...]` blocks from the same Flash Lite candidate drops the primary score from 54.1% to 17.0% under Gemini judging and from 77.6% to 2.3% under Codex judging. Both judges flag the no-camera ablation as a large, unambiguous regression.
-- **Bigger model is better under both judges.** Flash beats Flash Lite by +15.8 points under Gemini judging and +4.7 points under Codex judging. The ranking is consistent.
+- **Camera channel matters under both judges (same model with vs without camera).** Holding the candidate fixed at `gemini-2.5-flash-lite` and removing `[Camera: ...]` blocks drops the primary score by 37.1 points under Gemini judging (54.1% to 17.0%) and by 75.2 points under Codex judging (77.6% to 2.3%). Both judges flag the no-camera ablation as a large, unambiguous regression.
+- **Bigger model is better under both judges.** Flash beats Flash Lite by 15.8 points under Gemini judging and by 4.7 points under Codex judging. The ranking is consistent.
 - **The judges disagree on absolute calibration, not on ranking.** Codex is more generous on camera-enabled runs and far harsher on the no-camera ablation. The within-family vs cross-family comparison is the point: ranking is stable, the level is not.
 - **`clarify` and `abstain` rates are reported separately** in each run's `findings.md`. They are auxiliary diagnostics and do not enter the primary score.
 
