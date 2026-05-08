@@ -27,7 +27,7 @@ either update or stay stuck.
 separately:
 
 - Coaching advice quality (correctness, safety, domain appropriateness)
-- Multi-turn conversation dynamics beyond three turns
+- Multi-turn conversation dynamics beyond two turns
 - Proactive coaching (assistance offered without a direct question)
 - Domain expertise depth
 - Latency, cost, and serving characteristics

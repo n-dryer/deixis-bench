@@ -21,7 +21,7 @@ situational evidence, or does it stay anchored to the prior context?
 It does **not** measure:
 
 - Whether the coaching advice is correct, safe, or domain-appropriate
-- Multi-turn conversation dynamics beyond a three-turn structure
+- Multi-turn conversation dynamics beyond a two-turn structure
 - Performance on actual video frames (these are text proxies)
 - Proactive coaching (noticing without being asked)
 

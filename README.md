@@ -163,7 +163,7 @@ Official model results should be generated only after the task set, prompt condi
 
 ### Tasks
 
-Each task is a three-turn conversation. Between Turn 1 and Turn 2, the user changes what they are holding, viewing, doing, or referring to. The user does not spell out the change. The model has to answer the Turn 2 question using the scene the user means at that moment.
+Each task is a two-turn conversation. Between Turn 1 and Turn 2, the user changes what they are holding, viewing, doing, or referring to. The user does not spell out the change. The model has to answer the Turn 2 question using the scene the user means at that moment.
 
 The scene descriptions include visible details such as shape, material, color, motion, and position. They avoid naming the object directly.
 
@@ -197,7 +197,7 @@ By default (`--judge-family auto`), the judge comes from a different model famil
 Evaluate these separately:
 
 - Coaching advice quality (correctness, safety, domain appropriateness)
-- Multi-turn dynamics beyond three turns
+- Multi-turn dynamics beyond two turns
 - Raw video, image, or audio perception
 - Latency, cost, and serving characteristics
 - Speaker attribution, addressee detection, ambient audio
