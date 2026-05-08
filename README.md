@@ -16,6 +16,7 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 
 | Need | Start here |
 |---|---|
+| See current scores | [Results](#results) |
 | Read the benchmark design | [`docs/benchmark_spec.md`](docs/benchmark_spec.md) |
 | Review methodology | [Methodology](#methodology) |
 | Configure API keys | [`docs/api_keys.md`](docs/api_keys.md) |
@@ -23,7 +24,26 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 | Look up a term | [`docs/glossary.md`](docs/glossary.md) |
 | Report an issue | [GitHub Issues](https://github.com/n-dryer/wearable-assistant-context-bench/issues) |
 
-Reproduction commands live in [`data/README.md`](data/README.md).
+## Results
+
+Initial sweep, 2026-05-06. Three runs, 166 tasks each, three prompt conditions per run, single trial per cell. Each run is scored under two judges: Gemini 2.5 Flash Lite (within-family) and Codex's own model (cross-family). The cross-family numbers are the more credible ranking signal; the same-family numbers are reported alongside so the two views can be compared directly.
+
+| Run | Candidate | Gemini-judge primary (95% CI) | Codex-judge primary (95% CI) |
+|---|---|---|---|
+| **baseline-flash** | `gemini/gemini-2.5-flash` | **69.9% (60.6 to 79.2)** | **82.2% (74.1 to 90.3)** |
+| **baseline-flash-lite** | `gemini/gemini-2.5-flash-lite` | **54.1% (44.9 to 63.4)** | **77.6% (68.7 to 86.4)** |
+| **no-camera** | `gemini/gemini-2.5-flash-lite` (`--no-camera`) | **17.0% (9.2 to 24.8)** | **2.3% (0.0 to 5.5)** |
+
+Primary score is `mean(current_recall, prior_recall)` under the `baseline` prompt condition, with `current` and `prior` as per-class recall (TP / (TP + FN), not overall accuracy).
+
+What the table shows:
+
+- **Camera channel matters under both judges.** Stripping `[Camera: ...]` blocks from the same Flash Lite candidate drops the primary score from 54.1% to 17.0% under Gemini judging and from 77.6% to 2.3% under Codex judging. Both judges flag the no-camera ablation as a large, unambiguous regression.
+- **Bigger model is better under both judges.** Flash beats Flash Lite by +15.8 points under Gemini judging and +4.7 points under Codex judging. The ranking is consistent.
+- **The judges disagree on absolute calibration, not on ranking.** Codex is more generous on camera-enabled runs and far harsher on the no-camera ablation. The within-family vs cross-family comparison is the point: ranking is stable, the level is not.
+- **`clarify` and `abstain` rates are reported separately** in each run's `findings.md`. They are auxiliary diagnostics and do not enter the primary score.
+
+Raw outputs and reproduction commands for these runs live in [`data/published-runs/`](data/published-runs/).
 
 ## Quick Start
 
