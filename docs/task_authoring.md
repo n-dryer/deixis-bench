@@ -172,6 +172,47 @@ state that existed **before Turn 1 was spoken**. This applies to:
 For all other tasks, `pre_turn_context_scene_description` is null and `turn_1_scene_description`
 establishes the initial state.
 
+### Choosing between `shift_type` values
+
+A single shift can plausibly fit more than one category. A person on
+a workshop bench moving from sanding to staining "is" a sequential
+task, but it is also a state change for the board and an object swap
+in the hand. Pick the **most specific** category that fits, in this
+order:
+
+1. **`cross_session_reference`** — `pre_turn_context_scene_description`
+   is non-null. Always takes precedence (and is enforced at the schema
+   level).
+2. **`screen_content`** — both turns are looking at a screen and the
+   screen content has changed. Use this even if the user is doing a
+   sequential workflow on the screen.
+3. **`absent_referent`** — the entity Turn 2 is asking about is no
+   longer in frame. Use this even if a later step continues elsewhere.
+4. **`location`** — the whole scene or setting changes (different
+   room, indoor → outdoor, workbench → cooktop). Use this for
+   whole-scene shifts even if a task is continuing.
+5. **`object_in_hand`** — the user puts down one object and picks up a
+   different object. Use this even if the new object is part of a
+   later step in the same task.
+6. **`object_state`** — the same primary object stays in frame and
+   transitions to a different physical state (paint drying, dough
+   rising, body posture changing).
+7. **`object_in_view`** — same scene, the camera or user attention
+   shifts to a different object that was already in (or adjacent to)
+   the frame. No object swap, no state change of the original.
+8. **`sequential_task`** — last resort. Reserve for cases where the
+   **same primary object or surface** is still in view and the
+   **operation itself** has changed to the next step (for example,
+   sand → stain on the same board, knead → bake the same dough). If
+   any of the conditions above hold, pick that category instead.
+
+When in doubt, ask: "what is the dominant visual difference between
+T1 and T2?" If it is a different object in the hand, that is
+`object_in_hand`. If it is a new room, that is `location`. If it is
+a different screen, that is `screen_content`. Only when the surface
+and object are unchanged but the operation has moved on is the
+answer `sequential_task`.
+
 ---
 
 ## Gold-answer rules

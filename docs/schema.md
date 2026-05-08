@@ -51,6 +51,13 @@ ground-truth context. The candidate never sees `gold_label`,
 | `screen_content` | The visible screen content changes. |
 | `cross_session_reference` | Turn 2 asks about a pre-Turn-1 state. |
 
+When a shift could plausibly fit more than one category, follow the
+precedence order in
+[`task_authoring.md`](task_authoring.md#choosing-between-shift_type-values).
+The short version: pick the most specific category. `sequential_task`
+is the last resort — only use it when the same surface and object
+remain in frame and only the operation has changed.
+
 ## Reference Answers
 
 `reference_answers` contains four judge-only lists:
