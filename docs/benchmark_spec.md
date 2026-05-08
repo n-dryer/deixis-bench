@@ -244,7 +244,11 @@ Each run emits a manifest recorded in the findings output. The
 manifest fields include:
 
 - `benchmark_version`: the runner code version
-- `camera_injection`: boolean; always `true`
+- `camera_injection`: boolean; `true` when `[Camera: ...]` blocks are
+  injected into candidate prompts (the default), `false` when the
+  runner is invoked with `--no-camera` for the camera-channel ablation.
+  Set in `wearable_assistant_context_bench/runner.py` as
+  `"camera_injection": not bool(effective_config.get("no_camera", False))`.
 - `task_set`: `"main"` for the flat pre-release task set
 - `tasks_sha256`: hash of `data/tasks.jsonl`
 - `prompt_conditions_sha256`: hash of `data/prompt_conditions.json`
