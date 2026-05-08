@@ -26,20 +26,23 @@ The benchmark uses text transcripts of speech and text scene descriptions of vid
 
 ## Results
 
-Initial sweep, 2026-05-06. Three runs, 166 tasks each, three prompt conditions per run, single trial per cell. Each run is scored under two judges: Gemini 2.5 Flash Lite (within-family) and Codex's own model (cross-family). The cross-family numbers are the more credible ranking signal; the same-family numbers are reported alongside so the two views can be compared directly.
+Initial sweep, 2026-05-06. Three runs, 166 tasks each, three prompt conditions per run, single trial per cell. Each run is scored under two judges: Gemini 2.5 Flash Lite (within-family) and `gpt-5-codex` (cross-family). The cross-family numbers are the more credible ranking signal; the same-family numbers are reported alongside so the two views can be compared directly.
 
-| Run | Candidate | Gemini-judge primary (95% CI) | Codex-judge primary (95% CI) |
-|---|---|---|---|
-| **baseline-flash** | `gemini/gemini-2.5-flash` | **69.9% (60.6 to 79.2)** | **82.2% (74.1 to 90.3)** |
-| **baseline-flash-lite** | `gemini/gemini-2.5-flash-lite` | **54.1% (44.9 to 63.4)** | **77.6% (68.7 to 86.4)** |
-| **no-camera** | `gemini/gemini-2.5-flash-lite` (`--no-camera`) | **17.0% (9.2 to 24.8)** | **2.3% (0.0 to 5.5)** |
+The two judges agree on which candidates are better. On the camera-enabled runs the cross-judge Fleiss kappa is 0.44 to 0.48 (moderate agreement); on the no-camera ablation it is 0.28 (fair). Both judges rank `gemini-2.5-flash` above `gemini-2.5-flash-lite` above the no-camera ablation. The ranking is identical; absolute scores differ.
 
-Primary score is `mean(current_recall, prior_recall)` under the `baseline` prompt condition, with `current` and `prior` as per-class recall (TP / (TP + FN), not overall accuracy).
+| Run | Candidate | Gemini-judge primary (95% CI) | Codex-judge primary (95% CI) | Fleiss kappa |
+|---|---|---|---|---|
+| **baseline-flash** | `gemini/gemini-2.5-flash` | **69.9% (60.2 to 79.4)** | **82.2% (73.0 to 89.6)** | 0.44 |
+| **baseline-flash-lite** | `gemini/gemini-2.5-flash-lite` | **54.1% (45.1 to 63.2)** | **77.6% (68.2 to 86.0)** | 0.48 |
+| **no-camera** | `gemini/gemini-2.5-flash-lite` (`--no-camera`) | **17.0% (9.5 to 24.3)** | **2.3% (0.0 to 6.1)** | 0.28 |
+
+CIs are 95% percentile bootstrap intervals over 1000 resamples (numpy `default_rng(42)`). Primary score is `mean(current_recall, prior_recall)` under the `baseline` prompt condition, with `current` and `prior` as per-class recall (TP / (TP + FN), not overall accuracy). Fleiss kappa is over the four judge labels (`current`, `prior`, `clarify`, `abstain`) on the 166 paired baseline trials.
 
 What the table shows:
 
+- **Two judge families rank the candidates the same way.** Fleiss kappa runs 0.28 to 0.48 across the three runs, with raw label agreement of 60 to 66 percent. The ranking (`flash` > `flash-lite` > `no-camera`) is identical under both judges.
 - **Camera channel matters under both judges (same model with vs without camera).** Holding the candidate fixed at `gemini-2.5-flash-lite` and removing `[Camera: ...]` blocks drops the primary score by 37.1 points under Gemini judging (54.1% to 17.0%) and by 75.2 points under Codex judging (77.6% to 2.3%). Both judges flag the no-camera ablation as a large, unambiguous regression.
-- **Bigger model is better under both judges.** Flash beats Flash Lite by 15.8 points under Gemini judging and by 4.7 points under Codex judging. The ranking is consistent.
+- **Bigger model is better under both judges.** Flash beats Flash Lite by 15.8 points under Gemini judging and by 4.7 points under Codex judging.
 - **The judges disagree on absolute calibration, not on ranking.** Codex is more generous on camera-enabled runs and far harsher on the no-camera ablation. The within-family vs cross-family comparison is the point: ranking is stable, the level is not.
 - **`clarify` and `abstain` rates are reported separately** in each run's `findings.md`. They are auxiliary diagnostics and do not enter the primary score.
 
