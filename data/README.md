@@ -94,22 +94,43 @@ The runs that back the Results table in the top-level `README.md` are
 checked in under `data/published-runs/`. Each run directory contains
 the candidate transcripts and two judge summaries: one from a
 within-family judge (Gemini 2.5 Flash Lite) and one from a cross-family
-judge (Codex's own model).
+judge (`gpt-5-codex`).
 
 | Path | Candidate | Within-family judge | Cross-family judge | Notes |
 |---|---|---|---|---|
-| `data/published-runs/baseline-flash/` | `gemini/gemini-2.5-flash` | `gemini/gemini-2.5-flash-lite` | Codex own model | Default prompt, camera on |
-| `data/published-runs/baseline-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | Codex own model | Default prompt, camera on, same-family judge baseline |
-| `data/published-runs/no-camera-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | Codex own model | Camera channel stripped (`--no-camera`) |
+| `data/published-runs/baseline-flash/` | `gemini/gemini-2.5-flash` | `gemini/gemini-2.5-flash-lite` | `gpt-5-codex` | Default prompt, camera on |
+| `data/published-runs/baseline-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | `gpt-5-codex` | Default prompt, camera on, same-family judge baseline |
+| `data/published-runs/no-camera-flash-lite/` | `gemini/gemini-2.5-flash-lite` | `gemini/gemini-2.5-flash-lite` | `gpt-5-codex` | Camera channel stripped (`--no-camera`) |
 
 Each directory contains:
 
 | File | Purpose |
 |---|---|
-| `summary.json` | Aggregate metrics under the within-family (Gemini) judge. |
-| `summary-codex-judge.json` | Aggregate metrics under the cross-family (Codex) judge. |
+| `summary.json` | Aggregate metrics under the within-family (Gemini) judge, plus a `cross_judge_agreement` block with the Fleiss kappa between the two judges. |
+| `summary-codex-judge.json` | Aggregate metrics under the cross-family (`gpt-5-codex`) judge, plus the per-trial `baseline_verdicts` table that pairs each judge's label with the gold label. |
 | `transcripts.jsonl` | Per-trial candidate inputs, candidate responses, and judge labels. |
 | `findings.md` | Human-readable per-class, per-shift-type, per-condition breakdown. |
+
+### Confidence intervals and cross-judge agreement
+
+Each metric in `summary.json` and `summary-codex-judge.json` carries a
+`ci_95` field: a 95% percentile bootstrap interval over 1000 resamples
+of the trial-level outcomes, drawn with `numpy.random.default_rng(42)`.
+Per-class recalls bootstrap each gold class independently; the primary
+`mean(current, prior)` recall bootstraps both classes jointly and
+takes the mean of resampled per-class recalls. Hedging rates
+(`clarify_rate`, `abstain_rate`, `coverage_rate`) bootstrap the
+binary indicator across all baseline-condition trials. The `ci_method`
+block at the bottom of each summary records the bootstrap parameters.
+
+The `cross_judge_agreement` field on each `summary.json` reports the
+Fleiss kappa between the two judges over the 166 paired baseline
+trials, treating each judge as one rater across the four-category
+label space (`current`, `prior`, `clarify`, `abstain`). Raw label
+agreement is stored alongside as `raw_agreement`.
+
+The bootstrap CIs and kappa are recomputed from the trial-level data
+by `scripts/recompute_published_run_stats.py`.
 
 Reproduce locally:
 
