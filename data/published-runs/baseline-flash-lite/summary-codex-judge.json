@@ -7,23 +7,22 @@
   "n_trials_judged": 166,
   "n_tasks_judged": 166,
   "candidate_model": "gemini/gemini-2.5-flash-lite",
-  "judge_model": "codex-own-model",
+  "judge_model": "gpt-5-codex",
   "judge_family": "codex",
   "ranking_condition": "baseline",
   "primary_score_mean_recall": {
     "point": 0.7755434782608696,
     "ci_95": [
-      0.6873038562353615,
-      0.8637831002863776
-    ],
-    "ci_method": "normal approximation over mean of current/prior recalls"
+      0.6820244565217392,
+      0.8597826086956522
+    ]
   },
   "per_class_recall": {
     "current": {
       "point": 0.8260869565217391,
       "ci_95": [
-        0.692766462836215,
-        0.9091420829775368
+        0.717391304347826,
+        0.9347826086956522
       ],
       "tp": 38,
       "fn": 8,
@@ -32,8 +31,8 @@
     "prior": {
       "point": 0.725,
       "ci_95": [
-        0.5716504419378943,
-        0.8389198375233267
+        0.575,
+        0.85
       ],
       "tp": 29,
       "fn": 11,
@@ -44,31 +43,30 @@
     "main": {
       "point": 0.7755434782608696,
       "ci_95": [
-        0.6873038562353615,
-        0.8637831002863776
-      ],
-      "ci_method": "normal approximation over mean of current/prior recalls"
+        0.6820244565217392,
+        0.8597826086956522
+      ]
     }
   },
   "clarify_rate": {
     "point": 0.12048192771084337,
     "ci_95": [
-      0.07936257764109922,
-      0.17876908894437593
+      0.0783132530120482,
+      0.1746987951807229
     ]
   },
   "abstain_rate": {
     "point": 0.18072289156626506,
     "ci_95": [
-      0.12962614302362152,
-      0.24626240188161946
+      0.126355421686747,
+      0.24096385542168675
     ]
   },
   "coverage_rate": {
     "point": 0.6987951807228916,
     "ci_95": [
-      0.6251551911582904,
-      0.7634425072969369
+      0.6265060240963856,
+      0.7710843373493976
     ]
   },
   "label_counts": {
@@ -1108,5 +1106,11 @@
     "task_set": "main",
     "no_camera": false,
     "enable_repair": false
+  },
+  "ci_method": {
+    "type": "percentile_bootstrap",
+    "n_iter": 1000,
+    "seed": 42,
+    "rng": "numpy.random.default_rng"
   }
 }

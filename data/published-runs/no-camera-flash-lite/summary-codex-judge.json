@@ -7,23 +7,22 @@
   "n_trials_judged": 166,
   "n_tasks_judged": 166,
   "candidate_model": "gemini/gemini-2.5-flash-lite",
-  "judge_model": "codex-own-model",
+  "judge_model": "gpt-5-codex",
   "judge_family": "codex",
   "ranking_condition": "baseline",
   "primary_score_mean_recall": {
     "point": 0.023369565217391305,
     "ci_95": [
       0.0,
-      0.05545093532810397
-    ],
-    "ci_method": "normal approximation over mean of current/prior recalls"
+      0.06086956521739131
+    ]
   },
   "per_class_recall": {
     "current": {
       "point": 0.021739130434782608,
       "ci_95": [
-        0.0038478542580502872,
-        0.11335294521511355
+        0.0,
+        0.06521739130434782
       ],
       "tp": 1,
       "fn": 45,
@@ -32,8 +31,8 @@
     "prior": {
       "point": 0.025,
       "ci_95": [
-        0.0044268315026814095,
-        0.1288136896347409
+        0.0,
+        0.075
       ],
       "tp": 1,
       "fn": 39,
@@ -45,30 +44,29 @@
       "point": 0.023369565217391305,
       "ci_95": [
         0.0,
-        0.05545093532810397
-      ],
-      "ci_method": "normal approximation over mean of current/prior recalls"
+        0.06086956521739131
+      ]
     }
   },
   "clarify_rate": {
     "point": 0.5602409638554217,
     "ci_95": [
-      0.48421751123171053,
-      0.6335393670880552
+      0.4759036144578313,
+      0.6325301204819277
     ]
   },
   "abstain_rate": {
     "point": 0.42771084337349397,
     "ci_95": [
-      0.35492171097023706,
-      0.5037700350460438
+      0.3493975903614458,
+      0.5
     ]
   },
   "coverage_rate": {
     "point": 0.012048192771084338,
     "ci_95": [
-      0.0033102913258154093,
-      0.04285899428408123
+      0.0,
+      0.030120481927710843
     ]
   },
   "label_counts": {
@@ -1108,5 +1106,11 @@
     "task_set": "main",
     "no_camera": true,
     "enable_repair": false
+  },
+  "ci_method": {
+    "type": "percentile_bootstrap",
+    "n_iter": 1000,
+    "seed": 42,
+    "rng": "numpy.random.default_rng"
   }
 }
