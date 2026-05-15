@@ -35,7 +35,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-  "google-genai==1.73.1",
+  "google-genai==2.0.1",
   "litellm==1.83.14",
   "rapidfuzz==3.14.5",
   "python-dotenv==1.2.2",
